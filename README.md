@@ -41,11 +41,12 @@ PAR exposes computer use to the robot's planner as one more capability,
 `/robot/ws` WebSocket, blocks until the Navigation Agent finishes, and feeds the
 text result back into the loop so the robot can continue its physical task.
 
-- `use_computer` is `risk=HIGH`. Under PAR's `real_robot` profile
-  (`approval_required: true`) it escalates to a human before anything is
+- `use_computer` is `risk=HIGH`. Whenever the active PAR profile has
+  `approval_required: true` it escalates to a human before anything is
   dispatched. This matters because CollectiveOS's `/robot/ws` path has no
   approval gate of its own — PAR's Safety Kernel is the only one in the round
-  trip. Under the `simulation` profile it runs unattended.
+  trip. With `approval_required: false` (the stock `simulation` profile) it
+  runs unattended.
 - Each run is recorded to CollectiveOS's `data/demonstrations/`, which is the
   data trail for the robot *learning* to use a computer.
 
@@ -79,11 +80,24 @@ python examples/computer_use_loop.py
 
 ## Status
 
-- The bridge (`use_computer` capability, `ComputerAugmentedRobot`, per-capability
-  execution timeout) is in [Pulse#7](https://github.com/Anurag9Dhiman/Pulse/pull/7),
-  pending merge. Until it merges, the pinned `Pulse` commit does not include it.
-  After it merges, bump the pin with `git submodule update --remote Pulse`.
-- The bridge is unit-tested against a fake CollectiveOS client. A live end-to-end
-  run against a running CollectiveOS has **not** been verified yet.
-- Robot side is simulated (`MockRobot`); real hardware would go through Pulse's
-  ROS 2 adapter.
+Two PRs need to merge before the quickstart works from a fresh clone:
+
+- [Pulse#7](https://github.com/Anurag9Dhiman/Pulse/pull/7) adds the bridge
+  (`use_computer` capability, `ComputerAugmentedRobot`, per-capability
+  execution timeout).
+- [CollectiveOS#119](https://github.com/Anurag9Dhiman/CollectiveOS/pull/119)
+  fixes `/robot/ws`, which raised `NameError` on every connection.
+
+Until both merge, the pinned submodule commits don't include them. After they
+merge, bump the pins with `git submodule update --remote` and commit.
+
+Verified so far:
+
+- The bridge is unit-tested against a fake CollectiveOS client.
+- A live round trip works over a real local socket: PAR's runtime and
+  WebSocket client against CollectiveOS's real `/robot/ws` route, with only the
+  Navigation Agent call stubbed.
+
+Not verified yet: the real Navigation Agent (Gemini + desktop control) and the
+LLM planner choosing `use_computer` on its own. The robot side is simulated
+(`MockRobot`); real hardware would go through Pulse's ROS 2 adapter.
