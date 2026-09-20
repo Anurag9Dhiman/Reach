@@ -63,7 +63,8 @@ Navigation Agent needs):
 ```bash
 cd CollectiveOS
 pip install -r requirements.txt
-cp .env.example .env
+cp .env.example .env   # set API_TOKEN and GEMINI_API_KEY; also VISION_MODEL=gemini-3.6-flash
+                       # (the default gemini-2.0-flash returned 404 for a new key)
 uvicorn src.api:app --port 8000
 ```
 
@@ -80,24 +81,32 @@ python examples/computer_use_loop.py
 
 ## Status
 
-Two PRs need to merge before the quickstart works from a fresh clone:
+Three PRs need to merge before the quickstart works from a fresh clone:
 
 - [Pulse#7](https://github.com/Anurag9Dhiman/Pulse/pull/7) adds the bridge
   (`use_computer` capability, `ComputerAugmentedRobot`, per-capability
   execution timeout).
 - [CollectiveOS#119](https://github.com/Anurag9Dhiman/CollectiveOS/pull/119)
   fixes `/robot/ws`, which raised `NameError` on every connection.
+- [CollectiveOS#120](https://github.com/Anurag9Dhiman/CollectiveOS/pull/120)
+  fixes `requirements.txt`, which listed a nonexistent package and failed to
+  install on macOS.
 
-Until both merge, the pinned submodule commits don't include them. After they
+Until they merge, the pinned submodule commits don't include them. After they
 merge, bump the pins with `git submodule update --remote` and commit.
 
 Verified so far:
 
 - The bridge is unit-tested against a fake CollectiveOS client.
 - A live round trip works over a real local socket: PAR's runtime and
-  WebSocket client against CollectiveOS's real `/robot/ws` route, with only the
-  Navigation Agent call stubbed.
+  WebSocket client against CollectiveOS's real `/robot/ws` route.
+- A real run works end to end: PAR delegated a read-only task ("which
+  application is in the foreground?") to CollectiveOS's Navigation Agent using
+  Gemini, and the correct answer came back through PAR. That task takes no
+  actions, so the recorded demonstration has zero steps.
 
-Not verified yet: the real Navigation Agent (Gemini + desktop control) and the
-LLM planner choosing `use_computer` on its own. The robot side is simulated
-(`MockRobot`); real hardware would go through Pulse's ROS 2 adapter.
+Not verified yet: the LLM planner choosing `use_computer` on its own (the
+runs used a scripted planner), and a task where the Navigation Agent actually
+clicks or types, which is what produces a demonstration with steps. The robot
+side is simulated (`MockRobot`); real hardware would go through Pulse's ROS 2
+adapter.
