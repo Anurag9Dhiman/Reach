@@ -1,0 +1,8 @@
+[submodule "Pulse"]
+	path = Pulse
+	url = https://github.com/Anurag9Dhiman/Pulse.git
+	branch = main
+[submodule "CollectiveOS"]
+	path = CollectiveOS
+	url = https://github.com/Anurag9Dhiman/CollectiveOS.git
+	branch = main
