@@ -1,15 +1,29 @@
-\documentclass[conference]{IEEEtran}
-\IEEEoverridecommandlockouts
+\documentclass{article}
+
 % ---------------------------------------------------------------------------
-% Reach / PAR paper.
+% Reach / PAR paper - NeurIPS format.
+%
+% Uses the official neurips_2026.sty shipped alongside this file (fetched
+% and verified from a mirror of the official NeurIPS 2026 style files;
+% unmodified). [final] is used since this is an attributed writeup, not an
+% anonymous submission. `numbers, compress` is passed to natbib before
+% loading the conference style, per that style file's own documented
+% mechanism for customizing natbib - this gives the numeric bracketed
+% citation style ("[3]") conventional in NeurIPS papers rather than natbib's
+% own default author-year style.
+%
 % No LaTeX toolchain was available in the environment this was written in,
-% so this file has NOT been compiled locally. It uses only standard,
-% widely-available packages (all present in a default TeX Live / MiKTeX /
-% Overleaf install) and no external .bib file, so a single pdflatex pass
-% should be enough - but please compile once (e.g. on Overleaf) and fix any
-% local package-version quirks before submitting anywhere.
+% so this file has NOT been compiled locally. It was checked instead with a
+% script verifying brace balance, environment nesting, and that every
+% \citep/\citet key has a matching \bibitem (and vice versa). Please compile
+% once (e.g. on Overleaf) and fix any local package-version quirks before
+% submitting anywhere. If you intend an actual NeurIPS submission rather
+% than just the visual format, note the official template also requires a
+% Paper Checklist appendix, which is not included here.
 % ---------------------------------------------------------------------------
-\usepackage{cite}
+\PassOptionsToPackage{numbers, compress}{natbib}
+\usepackage[final]{neurips_2026}
+
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithm}
 \usepackage{algorithmic}
@@ -36,19 +50,16 @@
 }
 \lstset{style=code}
 
-\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
-
-\begin{document}
-
-\title{Reach: A Governing Physical Agent Runtime for Delegating\\
+\title{Reach: A Governing Physical Agent Runtime for Delegating \\
 Embodied Robot Tasks to Autonomous Computer-Use Systems}
 
 \author{
-\IEEEauthorblockN{Anurag Dhiman}
-\IEEEauthorblockA{\textit{Independent Researcher} \\
-\texttt{anuragdhiman666@gmail.com}}
+  Anurag Dhiman \\
+  Independent Researcher \\
+  \texttt{anuragdhiman666@gmail.com}
 }
+
+\begin{document}
 
 \maketitle
 
@@ -77,11 +88,6 @@ and discuss what remains before either component has been exercised under
 real hardware or a standard agent benchmark.
 \end{abstract}
 
-\begin{IEEEkeywords}
-embodied agents, large language model agents, tool use, computer-use
-agents, robot simulation, safety-governed autonomy
-\end{IEEEkeywords}
-
 \section{Introduction}
 
 A robot that can see and manipulate its physical environment will, sooner
@@ -89,7 +95,7 @@ or later, hit a step that is not physical at all: it needs to read a
 machine's on-screen status, enter a measurement into a tracking
 application, or submit a report before it can continue. One response is to
 train a single policy that jointly grounds physical affordances and screen
-operation~\cite{driess2023palme,brohan2023rt2}. We take a different,
+operation \citep{driess2023palme,brohan2023rt2}. We take a different,
 compositional approach: keep the robot's governing runtime and a
 desktop-operating agent as two separate, independently maintained systems,
 and make the decision to hand a task from one to the other an explicit,
@@ -99,7 +105,7 @@ single learned policy.
 This mirrors how large language model (LLM) agents already treat
 \textit{tools}: a reasoning loop that decides, at each step, whether to
 call an external capability and how to use its result before
-continuing~\cite{yao2023react,schick2023toolformer}. Reach generalizes this
+continuing \citep{yao2023react,schick2023toolformer}. Reach generalizes this
 pattern one level up the stack -- the ``tool'' a physical robot calls is not
 a search API or a calculator, but an entire autonomous agent that can
 perceive and operate a graphical desktop on the robot's behalf.
@@ -129,47 +135,47 @@ Our contributions are:
 \section{Related Work}
 
 \subsection{Embodied Language Agents}
-SayCan~\cite{ahn2022saycan} grounds an LLM's language-based planning in a
+SayCan \citep{ahn2022saycan} grounds an LLM's language-based planning in a
 learned affordance function so that proposed actions are both plausible and
-physically feasible; Huang~\textit{et al.}~\cite{huang2022zeroshot} show an
+physically feasible; \citet{huang2022zeroshot} show an
 LLM can propose actionable step sequences for embodied tasks with only a
-translation step onto admissible actions. PaLM-E~\cite{driess2023palme} and
-RT-2~\cite{brohan2023rt2} go further and fold visual and physical grounding
+translation step onto admissible actions. PaLM-E \citep{driess2023palme} and
+RT-2 \citep{brohan2023rt2} go further and fold visual and physical grounding
 directly into a single multimodal model. Reach sits closer to the first
 group: rather than fold computer-use competence into the robot's own model,
 it treats an entire external agent as the thing being grounded and
 invoked.
 
 \subsection{Tool Use and Reasoning in LLM Agents}
-ReAct~\cite{yao2023react} interleaves reasoning traces with actions so an
+ReAct \citep{yao2023react} interleaves reasoning traces with actions so an
 LLM agent can call a tool, observe the result, and revise its plan;
-Toolformer~\cite{schick2023toolformer} shows a model can learn \emph{when}
-to invoke a tool via self-supervision, and Reflexion~\cite{shinn2023reflexion}
+Toolformer \citep{schick2023toolformer} shows a model can learn \emph{when}
+to invoke a tool via self-supervision, and Reflexion \citep{shinn2023reflexion}
 adds verbal self-critique after a failed attempt. Multi-agent frameworks
-such as AutoGen~\cite{wu2023autogen} and embodied, lifelong-learning agents
-such as Voyager~\cite{wang2023voyager} treat other agents or skill libraries
+such as AutoGen \citep{wu2023autogen} and embodied, lifelong-learning agents
+such as Voyager \citep{wang2023voyager} treat other agents or skill libraries
 as callable units much as we treat the autonomous computer-use system: a
 capability with a name, a description, and a result that feeds back into
 the caller's own loop.
 
 \subsection{Autonomous Computer-Use and GUI Agents}
-WebArena~\cite{zhou2023webarena} and Mind2Web~\cite{deng2023mind2web}
+WebArena \citep{zhou2023webarena} and Mind2Web \citep{deng2023mind2web}
 benchmark agents that must complete tasks by operating real web
-interfaces, and CogAgent~\cite{hong2023cogagent} targets GUI grounding
+interfaces, and CogAgent \citep{hong2023cogagent} targets GUI grounding
 directly from screenshots. Commercial computer-use agents that perceive a
 screen and drive the mouse and keyboard, such as
-Anthropic's~\cite{anthropic2024computeruse}, follow the same
+Anthropic's \citep{anthropic2024computeruse}, follow the same
 perceive--plan--act--verify loop our ACS component implements. Reach does
 not propose a new computer-use agent; it proposes a governed protocol for
 an \emph{external, physical} caller to invoke one.
 
 \subsection{Robot Simulation Platforms}
-Webots~\cite{michel2004webots} and the Robot Operating
-System~\cite{quigley2009ros} are the standard tooling for developing and
-testing robot software before physical deployment; MuJoCo~\cite{todorov2012mujoco}
-and Isaac Gym~\cite{makoviychuk2021isaacgym} target high-throughput
+Webots \citep{michel2004webots} and the Robot Operating
+System \citep{quigley2009ros} are the standard tooling for developing and
+testing robot software before physical deployment; MuJoCo \citep{todorov2012mujoco}
+and Isaac Gym \citep{makoviychuk2021isaacgym} target high-throughput
 physics for learning. Sim-to-real transfer typically relies on domain
-randomization~\cite{tobin2017domain,peng2018simtoreal} to close the gap
+randomization \citep{tobin2017domain,peng2018simtoreal} to close the gap
 between simulated and physical dynamics. Our simulation integration is
 narrower in scope: it does not attempt sim-to-real transfer of a learned
 policy, only a faithful, physically-simulated stand-in for a mocked robot
@@ -177,11 +183,11 @@ interface, reusing a ROS~2-shaped schema so that a later move to ROS~2
 itself is a transport change rather than a redesign.
 
 \subsection{Safety-Governed Autonomy}
-Amodei~\textit{et al.}~\cite{amodei2016concrete} catalog concrete failure
+\citet{amodei2016concrete} catalog concrete failure
 modes -- including unsafe exploration and reward hacking -- that motivate
 building explicit safety layers around otherwise-capable agents rather
 than trusting a policy's own judgment; Constitutional
-AI~\cite{bai2022constitutional} pursues a complementary strategy of
+AI \citep{bai2022constitutional} pursues a complementary strategy of
 shaping the model's own behavior via a set of stated principles. Reach's
 safety kernel is closer to the former: an external, non-learned gate that
 a possibly-untrusted planner's proposed action must pass through, with an
@@ -201,7 +207,7 @@ robot's own observation--action loop so it can continue the physical task.
 \centering
 \begin{tikzpicture}[
   node distance=6mm,
-  box/.style={draw, rounded corners, align=center, minimum height=8mm, minimum width=30mm, font=\small},
+  box/.style={draw, rounded corners, align=center, minimum height=8mm, minimum width=40mm, font=\small},
   arr/.style={-{Latex[length=2mm]}, thick}
 ]
 \node[box] (world) {Physical world\\(observation)};
@@ -231,7 +237,7 @@ risk level, and the environment profiles it is valid under). A
 \texttt{Planner} maps a goal and the current observation to the next
 \texttt{Action}; we use interchangeably a deterministic
 keyword-matching planner for testing and an LLM tool-use planner
-(Claude or Gemini, following the ReAct pattern~\cite{yao2023react}) for
+(Claude or Gemini, following the ReAct pattern \citep{yao2023react}) for
 open-ended goals, both implementing the same interface so the surrounding
 runtime is agnostic to which one is in use.
 
@@ -283,7 +289,7 @@ accessibility tree, plans a short sequence of sub-steps with a
 vision-language model, grounds and executes each step through UI
 automation or browser control, and verifies the action changed the screen
 as expected before continuing -- the same shape of loop used by GUI-agent
-benchmarks and systems~\cite{zhou2023webarena,deng2023mind2web,hong2023cogagent,anthropic2024computeruse}.
+benchmarks and systems \citep{zhou2023webarena,deng2023mind2web,hong2023cogagent,anthropic2024computeruse}.
 Write-flavored actions (send, delete, purchase, \ldots) are meant to pause
 for human-in-the-loop confirmation when the ACS is driven through its own
 chat interface; critically, that confirmation gate is \emph{not} wired
@@ -333,7 +339,7 @@ denial-is-recoverable design.
 To evaluate whether the safety kernel's physical checks (workspace bounds,
 collision margin) behave sensibly against something more than an
 in-memory mock, we bridged PAR to a physically-simulated differential-drive
-robot in Webots~\cite{michel2004webots}. PAR already supports a ROS~2
+robot in Webots \citep{michel2004webots}. PAR already supports a ROS~2
 robot interface with a pure, transport-agnostic JSON mapping between its
 \texttt{Observation}/\texttt{Action} types and a wire payload; because our
 development environment had no official ROS~2 build for its OS/CPU
@@ -446,7 +452,7 @@ have not yet evaluated whether an LLM planner reliably chooses to delegate
 interesting and harder question this architecture is meant to eventually
 answer. Evaluation is presently a single manual run rather than a
 benchmark suite; adapting a GUI-agent benchmark such as
-WebArena~\cite{zhou2023webarena} or Mind2Web~\cite{deng2023mind2web} to be
+WebArena \citep{zhou2023webarena} or Mind2Web \citep{deng2023mind2web} to be
 invoked through a robot planner, rather than directly, is natural future
 work. Finally, the current authentication between PAR and the ACS is a
 single shared secret, adequate for one robot and one ACS instance in
@@ -479,11 +485,11 @@ broader, harder validation -- on real simulator hardware, against
 benchmark tasks, and with the planner itself deciding when to reach for
 the computer.
 
-\section*{Acknowledgment}
+\section*{Acknowledgments}
 This system and this paper were developed with the assistance of Claude
 (Anthropic).
 
-\bibliographystyle{IEEEtran}
+\bibliographystyle{plainnat}
 \begin{thebibliography}{99}
 
 \bibitem{ahn2022saycan}
