@@ -1,0 +1,70 @@
+#VRML_SIM R2025a utf8
+# Minimal arena for PAR (Pulse) to drive a real simulated robot instead of
+# MockRobot. See webots/README.md for how to run this.
+#
+# Not yet opened in a real Webots install while writing this (none available
+# in the dev environment this was authored in) - if Webots' console flags a
+# node/field name here, it is very likely a version-naming mismatch on this
+# file, not a deeper problem; fix and re-save.
+
+WorldInfo {
+  basicTimeStep 32
+  coordinateSystem "ENU"
+  # ENU (Z-up) chosen to match PAR's existing (x, y) = ground plane,
+  # z = height convention already used throughout par.core / MockRobot.
+}
+Viewpoint {
+  orientation -0.1 0.05 0.99 1.7
+  position 0.2 -3.2 2.4
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  floorSize 4 4
+  floorAppearance Parquetry {
+  }
+}
+
+E-puck {
+  translation 0 0 0
+  rotation 0 0 1 0
+  name "epuck"
+  controller "<extern>"
+  supervisor TRUE
+}
+
+Solid {
+  translation 0.5 0.2 0.05
+  name "red_object"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.8 0.05 0.05
+        roughness 0.6
+        metalness 0
+      }
+      geometry Box {
+        size 0.1 0.1 0.1
+      }
+    }
+  ]
+}
+
+Solid {
+  translation -0.3 0.4 0.05
+  name "blue_container"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.05 0.15 0.8
+        roughness 0.6
+        metalness 0
+      }
+      geometry Box {
+        size 0.15 0.15 0.1
+      }
+    }
+  ]
+}
