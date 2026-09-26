@@ -1,0 +1,3 @@
+# Large raw artifacts (screenshots, etc.) some experiments may produce -
+# only the JSON/MD summaries in results/ are meant to be committed.
+results/raw/

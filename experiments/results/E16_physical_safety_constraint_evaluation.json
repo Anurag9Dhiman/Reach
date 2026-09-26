@@ -1,0 +1,11 @@
+{
+  "experiment_id": "E16",
+  "title": "Physical Safety Constraint Evaluation",
+  "generated_at": "2026-09-26T23:21:23.151505+00:00",
+  "config": {},
+  "metrics": {
+    "status": "blocked"
+  },
+  "notes": "**Blocked**: no Webots installation in this environment\n\n**Unblock when**: Webots installed and Gatekeeper-approved (Reach/webots/README.md); then re-run e05/e06's scenario battery through WebotsRobot instead of MockRobot",
+  "trials": []
+}

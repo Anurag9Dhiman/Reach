@@ -1,0 +1,11 @@
+{
+  "experiment_id": "E8b",
+  "title": "Risk-Based Human Escalation - human response time",
+  "generated_at": "2026-09-26T23:18:41.192176+00:00",
+  "config": {},
+  "metrics": {
+    "status": "blocked"
+  },
+  "notes": "**Blocked**: needs a real human operator approving/rejecting escalation prompts with timed responses\n\n**Unblock when**: the user runs a handful of trials personally (see also E23)",
+  "trials": []
+}

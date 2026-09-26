@@ -1,0 +1,44 @@
+{
+  "experiment_id": "E7",
+  "title": "Emergency-Stop Safety",
+  "generated_at": "2026-09-26T23:17:37.827853+00:00",
+  "config": {
+    "acs": "fake (FaultyCollectiveOSBridge - a call log proves the ACS was never actually contacted while e-stopped)",
+    "profile": "simulation, approval_required=False (isolating e-stop from escalation)"
+  },
+  "metrics": {
+    "all_actions_prevented_while_engaged": true,
+    "acs_never_contacted_while_engaged": true,
+    "recovers_after_clear": true
+  },
+  "notes": "PAR's Runtime is synchronous and single-threaded per step, so 'before planning' vs 'after planning' vs 'immediately before execution' collapse to the same admit()-time emergency-stop check within one _step() call - what's actually tested here is *which step in the sequence* e-stop is engaged at, including confirming the ACS's fake bridge call log stays empty for any step blocked while e-stopped (not just that the ActionResult reports failure).",
+  "trials": [
+    {
+      "scenario": "before_planning",
+      "action_prevented": true,
+      "acs_contacted": false,
+      "message": "emergency stop engaged"
+    },
+    {
+      "scenario": "after_planning_before_execution",
+      "first_step_succeeded": true,
+      "action_prevented": true,
+      "acs_contacted": false,
+      "message": "emergency stop engaged"
+    },
+    {
+      "scenario": "before_computer_delegation",
+      "action_prevented": true,
+      "acs_contacted": false,
+      "message": "emergency stop engaged"
+    },
+    {
+      "scenario": "mid_task_and_recovery",
+      "blocked_while_engaged": true,
+      "acs_contacted_while_engaged": false,
+      "acs_contacted_after_clear": true,
+      "recovered_after_clear": true,
+      "steps_after_clear": 2
+    }
+  ]
+}
