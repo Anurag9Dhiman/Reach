@@ -1,0 +1,326 @@
+{
+  "experiment_id": "E12",
+  "title": "Communication Robustness",
+  "generated_at": "2026-09-26T23:25:49.201399+00:00",
+  "config": {
+    "acs": "fake, real WebSocket server (harness/fake_acs_server.py)",
+    "n_trials_per_condition": 6,
+    "conditions": [
+      "normal",
+      "increased_latency",
+      "acs_response_delay",
+      "packet_loss_approx",
+      "temporary_disconnection",
+      "reconnection_after_failure"
+    ]
+  },
+  "metrics": {
+    "normal": {
+      "condition": "normal",
+      "message_delivery_rate": 1.0,
+      "task_completion_rate": 1.0,
+      "timeout_rate": 0.0,
+      "latency_seconds": {
+        "n": 6,
+        "mean": 0.002891340166873609,
+        "stdev": 0.004714387547913105,
+        "ci95_low": -0.0008809555208849017,
+        "ci95_high": 0.00666363585463212
+      }
+    },
+    "increased_latency": {
+      "condition": "increased_latency",
+      "message_delivery_rate": 1.0,
+      "task_completion_rate": 1.0,
+      "timeout_rate": 0.0,
+      "latency_seconds": {
+        "n": 6,
+        "mean": 1.0132088198321678,
+        "stdev": 0.002297434520985437,
+        "ci95_low": 1.0113704893495037,
+        "ci95_high": 1.015047150314832
+      }
+    },
+    "acs_response_delay": {
+      "condition": "acs_response_delay",
+      "message_delivery_rate": 1.0,
+      "task_completion_rate": 1.0,
+      "timeout_rate": 0.0,
+      "latency_seconds": {
+        "n": 6,
+        "mean": 3.0118092013314404,
+        "stdev": 0.0017349594033068806,
+        "ci95_low": 3.0104209446790087,
+        "ci95_high": 3.013197457983872
+      }
+    },
+    "packet_loss_approx": {
+      "condition": "packet_loss_approx (~50% connections dropped)",
+      "message_delivery_rate": 0.5,
+      "task_completion_rate": 0.5
+    },
+    "temporary_disconnection": {
+      "condition": "temporary_disconnection",
+      "message_delivery_rate": 0.0,
+      "task_completion_rate": 0.0,
+      "timeout_rate": 0.0,
+      "latency_seconds": {
+        "n": 6,
+        "mean": 0.0020010975010033385,
+        "stdev": 0.00047354944540835823,
+        "ci95_low": 0.001622179027988716,
+        "ci95_high": 0.002380015974017961
+      }
+    },
+    "reconnection_after_failure": {
+      "condition": "reconnection_after_failure",
+      "first_attempt_success": false,
+      "retry_success": true,
+      "recovered": true
+    }
+  },
+  "notes": "'packet_loss_approx' is a per-connection drop probability, not real TCP-level packet loss. 'increased_latency' and 'acs_response_delay' are mechanistically identical from CollectiveOSBridge's point of view (it cannot distinguish network latency from ACS processing time) - kept as two conditions at different magnitudes (1s vs 3s) to match the PDF's naming. reconnection_after_failure confirms recovery is possible, but only because a fresh connection attempt was made against a healthy server - CollectiveOSBridge.run_task() itself makes exactly one attempt and never retries on its own.",
+  "trials": [
+    {
+      "condition": "normal",
+      "message_delivery_rate": 1.0,
+      "task_completion_rate": 1.0,
+      "timeout_rate": 0.0,
+      "latency_seconds": {
+        "n": 6,
+        "mean": 0.002891340166873609,
+        "stdev": 0.004714387547913105,
+        "ci95_low": -0.0008809555208849017,
+        "ci95_high": 0.00666363585463212
+      },
+      "calls": [
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 0.012512665998656303,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 0.0010387079964857548,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 0.0009562089981045574,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 0.0009653750021243468,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 0.0010723750019678846,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 0.0008027080039028078,
+          "is_timeout": false
+        }
+      ]
+    },
+    {
+      "condition": "increased_latency",
+      "message_delivery_rate": 1.0,
+      "task_completion_rate": 1.0,
+      "timeout_rate": 0.0,
+      "latency_seconds": {
+        "n": 6,
+        "mean": 1.0132088198321678,
+        "stdev": 0.002297434520985437,
+        "ci95_low": 1.0113704893495037,
+        "ci95_high": 1.015047150314832
+      },
+      "calls": [
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 1.0122345419949852,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 1.0156163749925327,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 1.0093560420064023,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 1.0126420419983333,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 1.0148054589953972,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 1.0145984590053558,
+          "is_timeout": false
+        }
+      ]
+    },
+    {
+      "condition": "acs_response_delay",
+      "message_delivery_rate": 1.0,
+      "task_completion_rate": 1.0,
+      "timeout_rate": 0.0,
+      "latency_seconds": {
+        "n": 6,
+        "mean": 3.0118092013314404,
+        "stdev": 0.0017349594033068806,
+        "ci95_low": 3.0104209446790087,
+        "ci95_high": 3.013197457983872
+      },
+      "calls": [
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 3.012644040994928,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 3.0143204999912996,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 3.01111687500088,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 3.011180832996615,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 3.0091962500009686,
+          "is_timeout": false
+        },
+        {
+          "success": true,
+          "message": "ok",
+          "latency_seconds": 3.0123967090039514,
+          "is_timeout": false
+        }
+      ]
+    },
+    {
+      "condition": "packet_loss_approx (~50% connections dropped)",
+      "message_delivery_rate": 0.5,
+      "task_completion_rate": 0.5,
+      "calls": [
+        {
+          "success": false,
+          "message": "CollectiveOS connection failed: received 1000 (OK); then sent 1000 (OK)"
+        },
+        {
+          "success": false,
+          "message": "CollectiveOS connection failed: received 1000 (OK); then sent 1000 (OK)"
+        },
+        {
+          "success": false,
+          "message": "CollectiveOS connection failed: received 1000 (OK); then sent 1000 (OK)"
+        },
+        {
+          "success": true,
+          "message": "ok"
+        },
+        {
+          "success": true,
+          "message": "ok"
+        },
+        {
+          "success": true,
+          "message": "ok"
+        }
+      ]
+    },
+    {
+      "condition": "temporary_disconnection",
+      "message_delivery_rate": 0.0,
+      "task_completion_rate": 0.0,
+      "timeout_rate": 0.0,
+      "latency_seconds": {
+        "n": 6,
+        "mean": 0.0020010975010033385,
+        "stdev": 0.00047354944540835823,
+        "ci95_low": 0.001622179027988716,
+        "ci95_high": 0.002380015974017961
+      },
+      "calls": [
+        {
+          "success": false,
+          "message": "CollectiveOS connection failed: received 1000 (OK); then sent 1000 (OK)",
+          "latency_seconds": 0.002885084002627991,
+          "is_timeout": false
+        },
+        {
+          "success": false,
+          "message": "CollectiveOS connection failed: received 1000 (OK); then sent 1000 (OK)",
+          "latency_seconds": 0.00213725000503473,
+          "is_timeout": false
+        },
+        {
+          "success": false,
+          "message": "CollectiveOS connection failed: received 1000 (OK); then sent 1000 (OK)",
+          "latency_seconds": 0.0018333339976379648,
+          "is_timeout": false
+        },
+        {
+          "success": false,
+          "message": "CollectiveOS connection failed: received 1000 (OK); then sent 1000 (OK)",
+          "latency_seconds": 0.0018758749938569963,
+          "is_timeout": false
+        },
+        {
+          "success": false,
+          "message": "CollectiveOS connection failed: received 1000 (OK); then sent 1000 (OK)",
+          "latency_seconds": 0.0017183750023832545,
+          "is_timeout": false
+        },
+        {
+          "success": false,
+          "message": "CollectiveOS connection failed: received 1000 (OK); then sent 1000 (OK)",
+          "latency_seconds": 0.0015566670044790953,
+          "is_timeout": false
+        }
+      ]
+    },
+    {
+      "condition": "reconnection_after_failure",
+      "first_attempt_success": false,
+      "retry_success": true,
+      "recovered": true
+    }
+  ]
+}

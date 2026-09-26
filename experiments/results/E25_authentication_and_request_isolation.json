@@ -1,0 +1,57 @@
+{
+  "experiment_id": "E25",
+  "title": "Authentication and Request Isolation",
+  "generated_at": "2026-09-26T23:31:48.992100+00:00",
+  "config": {
+    "acs": "fake, real WebSocket server",
+    "real_token_scheme": "single shared secret, no per-robot identity"
+  },
+  "metrics": {
+    "testable_cases": 3,
+    "correctly_handled": 3,
+    "not_representable_cases": 4,
+    "valid_token_is_replayable": true
+  },
+  "notes": "3 of 6 PDF-requested scenarios are not representable against the real auth scheme: it is a single shared secret with no per-robot identity, expiry, or request nonce at all. Of what IS testable: valid/invalid/empty tokens are all handled correctly (accept/reject/reject), but a valid token can be replayed indefinitely - there is no mechanism preventing reuse. This is exactly the limitation the paper's Discussion already names as 'adequate for one robot and one ACS instance in development but not for a multi-robot or multi-tenant deployment' - this experiment is the empirical confirmation of that claim, not a new finding.",
+  "trials": [
+    {
+      "case": "valid_credentials",
+      "accepted": true,
+      "expected_accepted": true
+    },
+    {
+      "case": "invalid_credentials",
+      "accepted": false,
+      "expected_accepted": false
+    },
+    {
+      "case": "empty_credentials",
+      "accepted": false,
+      "expected_accepted": false
+    },
+    {
+      "case": "expired_credentials",
+      "accepted": null,
+      "expected_accepted": null,
+      "note": "not representable - no expiry mechanism exists in the current single-shared-secret scheme"
+    },
+    {
+      "case": "unknown_robot_identity",
+      "accepted": null,
+      "expected_accepted": null,
+      "note": "not representable - there is no per-robot identity concept at all, only one shared secret"
+    },
+    {
+      "case": "mismatched_robot_request_identifiers",
+      "accepted": null,
+      "expected_accepted": null,
+      "note": "not representable - requests carry no robot/request identifiers to mismatch"
+    },
+    {
+      "case": "request_replay",
+      "accepted": true,
+      "expected_accepted": null,
+      "note": "first_use_accepted=True, replay_accepted=True - a valid token can be reused indefinitely; nothing invalidates it after one use"
+    }
+  ]
+}

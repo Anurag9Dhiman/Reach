@@ -60,35 +60,36 @@ are unaffected and make up most of the list.
 | E8 | Risk-Based Human Escalation | none (direct kernel eval) | ✅ automated part (finds `use_computer` has one fixed risk tag, not content-sensitive — see results/E8_*.md) · 🚫 human-timing part |
 | E9 | LLM Delegation Decision | fake ACS, real Gemini planner | 🚫 blocked on quota reset |
 | E10 | Delegation Decision Ablation | fake ACS, real Gemini planner | 🚫 blocked on quota reset |
-| E11 | Failure Recovery | fake | ⏳ |
-| E12 | Communication Robustness | fake (WS server) | ⏳ |
-| E13 | Latency Breakdown | fake | ⏳ |
-| E14 | Task Complexity Scaling | fake | ⏳ |
-| E15 | Multiple Delegation Cycles | fake | ⏳ |
+| E11 | Failure Recovery | fake | ✅ (finds a genuine execution failure is terminal within one `run_task()` call by design — recovery only happens via a fresh retry) |
+| E12 | Communication Robustness | fake (WS server) | ✅ |
+| E13 | Latency Breakdown | fake | ✅ (PAR-side stages only — ACS-internal perceive/plan/ground/verify needs instrumenting CollectiveOS itself, out of scope) |
+| E14 | Task Complexity Scaling | fake ACS, scripted planner | ✅ (pipeline scaling only — planner-reasoning-at-scale is E9/E10/E19's job) |
+| E15 | Multiple Delegation Cycles | fake ACS, scripted planner | ✅ (empirically confirms task failure probability compounds with delegation count) |
 | E16 | Physical Safety Constraint Evaluation (Webots) | — | 🚫 no Webots install |
 | E17 | Webots End-to-End Validation | — | 🚫 no Webots install |
 | E18 | Physical–Digital Task Execution in Simulation (Webots) | — | 🚫 no Webots install |
 | E19 | Planner Comparison | fake ACS, real Gemini planner | 🚫 blocked on quota reset (GeminiPlanner vs RuleBasedPlanner only — no second LLM key available) |
-| E20 | ACS Interoperability | fake x2 | ⏳ |
-| E21 | Capability Abstraction Evaluation | fake | ⏳ |
-| E22 | Failure Taxonomy Analysis | fake | ⏳ |
+| E20 | ACS Interoperability | fake x2 | ✅ |
+| E21 | Capability Abstraction Evaluation | fake | ✅ (structural comparison only — live planner comparison needs quota) |
+| E22 | Failure Taxonomy Analysis | fake | ✅ (10 PDF categories collapse to 6 distinguishable from PAR's side; surfaces a new one — PAR accepts incorrect ACS results as success) |
 | E23 | Human-in-the-Loop Usability | — | 🚫 needs a real human operator |
-| E24 | Multi-Robot Scalability | fake (WS server) | ⏳ |
-| E25 | Authentication and Request Isolation | fake (WS server) | ⏳ |
+| E24 | Multi-Robot Scalability | fake (WS server) | ✅ (100% success, clean scaling through 8 concurrent clients) |
+| E25 | Authentication and Request Isolation | fake (WS server) | ✅ (3/6 PDF scenarios not representable — single shared secret, no per-robot identity; confirms a valid token is replayable) |
 | E26 | Demonstration Data Generation | real | 🚫 blocked on quota reset |
 | E27 | Imitation Learning from Delegated Demonstrations | real (data) | 🚫 blocked on quota reset (small proof-of-concept only, per scope decision — needs E26's data first) |
 | E28 | Demonstration Quality Analysis | real (data) | 🚫 blocked on quota reset (needs E26's data first) |
 | E29 | Generalization Across Task Domains | real | 🚫 blocked on quota reset |
-| E30 | Robustness to Observation Noise | fake | ⏳ |
-| E31 | Robustness to ACS Errors | fake | ⏳ |
-| E32 | End-to-End Robustness Under Combined Failures | fake | ⏳ |
-| E33 | Overall Systems Benchmark | mixed | ⏳ (aggregates the above — run last) |
+| E30 | Robustness to Observation Noise | none (direct kernel eval) | ✅ (collision check is purely position-based — mislabeling doesn't fool it, but missing/corrupted position data does) |
+| E31 | Robustness to ACS Errors | fake | ✅ (PAR accepts incorrect/incomplete/ambiguous ACS results as success identically to a correct one — no semantic verification exists) |
+| E32 | End-to-End Robustness Under Combined Failures | fake | ✅ (surfaces a real gap: an all-denials task exhausts `max_steps` stuck at `PLANNING`, neither `DONE` nor `FAILED`) |
+| E33 | Overall Systems Benchmark | mixed | ✅ (aggregates the other 32's results — 20/33 completed, 5/33 blocked, 8/33 not yet run as of this snapshot) |
 
-**Done so far: 7/33 fully run (E3, E4, E5, E6, E7, E8-automated), 1/33 run
-with a documented caveat (E1), 4/33 blocked on Webots/human (E16, E17, E18,
-E23), 6/33 blocked on today's quota (E2, E9, E10, E19, E26, E29 — plus E27,
-E28 which also need E26's output). 15/33 not yet started, all fake-ACS/no-ACS
-(no quota dependency) — next up.**
+**Done so far: 20/33 fully run, 1/33 (E1) run with a documented quota
+caveat, 5/33 blocked (E16, E17, E18, E23, E8's human-timing part — Webots
+install or a real human operator needed), 8/33 blocked on today's exhausted
+quota (E2, E9, E10, E19, E26, E27, E28, E29). Every fake-ACS/no-ACS
+experiment in the plan is now implemented; what's left all needs either a
+fresh Gemini quota day, a Webots install, or a human operator.**
 
 Full experiment specs (research question, design, metrics) are in memory:
 [[reach-experiments-overview]] and its five topic files, not duplicated here.

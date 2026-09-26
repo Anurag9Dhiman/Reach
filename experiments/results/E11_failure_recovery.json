@@ -1,0 +1,58 @@
+{
+  "experiment_id": "E11",
+  "title": "Failure Recovery",
+  "generated_at": "2026-09-26T23:24:20.464798+00:00",
+  "config": {
+    "acs": "fake (FaultyCollectiveOSBridge, one fault mode per trial)",
+    "failure_modes": [
+      "acs_timeout",
+      "connection_refused",
+      "auth_failure",
+      "malformed_reply",
+      "acs_explicit_failure"
+    ]
+  },
+  "metrics": {
+    "failure_detection_rate": 1.0,
+    "within_run_task_recovery_rate": 0.0,
+    "retry_recovery_rate": 1.0
+  },
+  "notes": "within_run_task_recovery_rate is 0/5 by design, not a bug: Runtime treats any genuine execution failure as terminal for the current run_task() call (Agent.record_result marks FAILED; only safety DENY/ESCALATE outcomes get fed back for re-planning within the same call - see Agent.record_result vs record_rejection). retry_recovery_rate measures the more realistic notion of recovery: a fresh run_task() call, informed the previous one failed, succeeds once the transient fault clears. This is itself a limitation worth carrying into future work: PAR has no built-in retry-with-backoff for transient ACS failures (503/timeout) within a single task attempt, which the E1 pilot's quota-exhaustion failures also illustrate in a real run.",
+  "trials": [
+    {
+      "failure_mode": "acs_timeout",
+      "failure_detected": true,
+      "within_single_run_task_continues": false,
+      "recovers_on_retry": true,
+      "first_attempt_message": "CollectiveOS did not reply within 180.0s"
+    },
+    {
+      "failure_mode": "connection_refused",
+      "failure_detected": true,
+      "within_single_run_task_continues": false,
+      "recovers_on_retry": true,
+      "first_attempt_message": "CollectiveOS connection failed: [Errno 61] Connection refused"
+    },
+    {
+      "failure_mode": "auth_failure",
+      "failure_detected": true,
+      "within_single_run_task_continues": false,
+      "recovers_on_retry": true,
+      "first_attempt_message": "CollectiveOS connection failed: server rejected WebSocket connection: HTTP 403"
+    },
+    {
+      "failure_mode": "malformed_reply",
+      "failure_detected": true,
+      "within_single_run_task_continues": false,
+      "recovers_on_retry": true,
+      "first_attempt_message": "CollectiveOS sent an invalid reply: Expecting value: line 1 column 1 (char 0)"
+    },
+    {
+      "failure_mode": "acs_explicit_failure",
+      "failure_detected": true,
+      "within_single_run_task_continues": false,
+      "recovers_on_retry": true,
+      "first_attempt_message": "the requested application could not be found"
+    }
+  ]
+}
