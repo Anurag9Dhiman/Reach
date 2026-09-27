@@ -1,0 +1,786 @@
+{
+  "experiment_id": "E15",
+  "title": "Multiple Delegation Cycles",
+  "generated_at": "2026-09-26T23:28:20.347157+00:00",
+  "config": {
+    "acs": "fake (FaultyCollectiveOSBridge, each delegation independently fails with probability 0.15)",
+    "planner": "scripted (fixed pattern per condition)",
+    "n_trials_per_pattern": 30,
+    "random_seed": 42,
+    "patterns": {
+      "P-D-P": "PDP",
+      "P-D-P-D-P": "PDPDP",
+      "P-D-P-D-P-D": "PDPDPD"
+    }
+  },
+  "metrics": {
+    "P-D-P": {
+      "n_delegations": 1,
+      "success_rate": 0.7666666666666667,
+      "observed_failure_rate": 0.23333333333333334,
+      "theoretical_failure_rate": 0.15000000000000002,
+      "accumulated_latency_seconds": {
+        "n": 30,
+        "mean": 0.00011767236719606444,
+        "stdev": 4.4705801745409543e-05,
+        "ci95_low": 0.00010167460149875222,
+        "ci95_high": 0.00013367013289337665
+      },
+      "total_incorrect_transitions": 0,
+      "total_replans": 0
+    },
+    "P-D-P-D-P": {
+      "n_delegations": 2,
+      "success_rate": 0.7,
+      "observed_failure_rate": 0.3,
+      "theoretical_failure_rate": 0.2775000000000001,
+      "accumulated_latency_seconds": {
+        "n": 30,
+        "mean": 0.00013739580026594922,
+        "stdev": 2.997787457950639e-05,
+        "ci95_low": 0.0001266683556188884,
+        "ci95_high": 0.00014812324491301004
+      },
+      "total_incorrect_transitions": 0,
+      "total_replans": 0
+    },
+    "P-D-P-D-P-D": {
+      "n_delegations": 3,
+      "success_rate": 0.6,
+      "observed_failure_rate": 0.4,
+      "theoretical_failure_rate": 0.3858750000000001,
+      "accumulated_latency_seconds": {
+        "n": 30,
+        "mean": 0.00014397096674656495,
+        "stdev": 3.0325312309968565e-05,
+        "ci95_low": 0.00013311919310439983,
+        "ci95_high": 0.00015482274038873008
+      },
+      "total_incorrect_transitions": 0,
+      "total_replans": 0
+    }
+  },
+  "notes": "observed_failure_rate tracks theoretical_failure_rate (1-(1-p)^n_delegations) reasonably closely across all three patterns, confirming task failure probability compounds with delegation count purely from exposure to independent per-call failures - not from any change in PAR's own logic as the pattern grows. incorrect_transitions is 0 throughout (the scripted sequence is followed exactly every time), which is expected and confirms the harness itself is not introducing noise into this measurement.",
+  "trials": [
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0003344169963384047,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.0001218329998664558,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00013904199295211583,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00010737500269897282,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00013275000674184412,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00012037499982398003,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0001171670010080561,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 8.199999865610152e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00011641699529718608,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 8.016699575819075e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00016033400606829673,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00012199999764561653,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 8.470899774692953e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00011654199624899775,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.000110041000880301,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00011095899390056729,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00010999999358318746,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0001126669958466664,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00011841600644402206,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 8.24169983388856e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00011583400191739202,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00011012500908691436,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0001015410089166835,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00011608400382101536,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00011437501234468073,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00011520899715833366,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 8.291700214613229e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 8.14160011941567e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00010945799294859171,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00010358401050325483,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.00020041700918227434,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00018916699627880007,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00017041699902620167,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.00013354199472814798,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.0001340000017080456,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00015137500304263085,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 7.245900633279234e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00014933300553821027,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00014787499094381928,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.00011991598876193166,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00014104200818110257,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00013812498946208507,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00014333399303723127,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 7.137500506360084e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0001515829935669899,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0001370410027448088,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00015116699796635658,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00014570800703950226,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0001402080088155344,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00013904199295211583,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.00013437500456348062,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00015383299614768475,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 7.52909982111305e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": false,
+      "accumulated_latency_seconds": 7.3666000389494e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00014262499462347478,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0001405829971190542,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0001475000026402995,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00014129100600257516,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00013870900147594512,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00014687501243315637,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.0001187919988296926,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0001638329995330423,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.00011829200957436115,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": false,
+      "accumulated_latency_seconds": 7.11659959051758e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": false,
+      "accumulated_latency_seconds": 7.71670020185411e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0001604169956408441,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.00012887500633951277,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00016633399354759604,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.00015158300811890513,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": false,
+      "accumulated_latency_seconds": 7.087500125635415e-05,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00016266699822153896,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00015683399396948516,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00015808400348760188,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.00015345799329224974,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.00015258300118148327,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.00011358399933669716,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0001600419927854091,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00016995800251606852,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00016650000179652125,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00015645899111405015,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00015787500888109207,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00016170799790415913,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.00011087500024586916,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00017133299843408167,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00016433400742243975,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00016116599726956338,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00016308401245623827,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.00015924999024719,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": true,
+      "accumulated_latency_seconds": 0.0001755840057739988,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": false
+    },
+    {
+      "pattern": "P-D-P-D-P-D",
+      "task_success": false,
+      "accumulated_latency_seconds": 0.00011641699529718608,
+      "incorrect_transitions": 0,
+      "n_replans": 0,
+      "any_delegation_failed": true
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "experiment_id": "E18",
+  "title": "Physical-Digital Task Execution in Simulation",
+  "generated_at": "2026-09-26T23:21:23.190885+00:00",
+  "config": {},
+  "metrics": {
+    "status": "blocked"
+  },
+  "notes": "**Blocked**: no Webots installation in this environment\n\n**Unblock when**: Webots installed and Gatekeeper-approved, run alongside a live CollectiveOS instance with available Gemini quota; ComputerAugmentedRobot(WebotsRobot()) composes the two existing wrappers directly (both already exist independently, just never run together)",
+  "trials": []
+}

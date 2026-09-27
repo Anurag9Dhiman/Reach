@@ -1,0 +1,122 @@
+{
+  "experiment_id": "E6",
+  "title": "Evaluation of the Four Safety Outcomes",
+  "generated_at": "2026-09-26T23:14:42.697536+00:00",
+  "config": {
+    "evaluation_method": "direct SafetyKernel.admit()/check() calls",
+    "profile": {
+      "name": "simulation",
+      "workspace": {
+        "x": [
+          -2.0,
+          2.0
+        ],
+        "y": [
+          -2.0,
+          2.0
+        ],
+        "z": [
+          0.0,
+          2.0
+        ]
+      },
+      "max_velocity": 2.0,
+      "action_timeout_seconds": 0.5,
+      "approval_required": true,
+      "collision_margin": 0.3
+    },
+    "n_scenarios": 10
+  },
+  "metrics": {
+    "decision_accuracy": 1.0,
+    "confusion_matrix": {
+      "allow": {
+        "allow": 3,
+        "modify": 0,
+        "deny": 0,
+        "escalate": 0
+      },
+      "modify": {
+        "allow": 0,
+        "modify": 2,
+        "deny": 0,
+        "escalate": 0
+      },
+      "deny": {
+        "allow": 0,
+        "modify": 0,
+        "deny": 3,
+        "escalate": 0
+      },
+      "escalate": {
+        "allow": 0,
+        "modify": 0,
+        "deny": 0,
+        "escalate": 2
+      }
+    }
+  },
+  "notes": "Uses a custom profile (action_timeout_seconds=0.5s, not either built-in profile) specifically to make MODIFY reachable within the workspace bounds - see module docstring. All 10 scenarios classified correctly in this run (DecisionAccuracy=1.0), which is expected: this is deterministic logic being exercised with scenarios chosen to clearly fall into one class each, not a noisy real-world classification problem. The confusion matrix is included as the PDF requests, even though it's necessarily diagonal for a correct, deterministic implementation - its value is in what it would reveal if a future change to the policy logic broke one of these boundary conditions.",
+  "trials": [
+    {
+      "scenario": "safe_detect",
+      "expected": "allow",
+      "actual": "allow",
+      "correct": true
+    },
+    {
+      "scenario": "safe_inspect",
+      "expected": "allow",
+      "actual": "allow",
+      "correct": true
+    },
+    {
+      "scenario": "safe_slow_move",
+      "expected": "allow",
+      "actual": "allow",
+      "correct": true
+    },
+    {
+      "scenario": "fast_move_1",
+      "expected": "modify",
+      "actual": "modify",
+      "correct": true
+    },
+    {
+      "scenario": "fast_move_2",
+      "expected": "modify",
+      "actual": "modify",
+      "correct": true
+    },
+    {
+      "scenario": "workspace_violation",
+      "expected": "deny",
+      "actual": "deny",
+      "correct": true
+    },
+    {
+      "scenario": "collision",
+      "expected": "deny",
+      "actual": "deny",
+      "correct": true
+    },
+    {
+      "scenario": "unsupported_profile",
+      "expected": "deny",
+      "actual": "deny",
+      "correct": true
+    },
+    {
+      "scenario": "high_risk_computer_1",
+      "expected": "escalate",
+      "actual": "escalate",
+      "correct": true
+    },
+    {
+      "scenario": "high_risk_computer_2",
+      "expected": "escalate",
+      "actual": "escalate",
+      "correct": true
+    }
+  ]
+}

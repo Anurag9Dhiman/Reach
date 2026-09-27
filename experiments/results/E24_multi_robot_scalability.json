@@ -1,0 +1,139 @@
+{
+  "experiment_id": "E24",
+  "title": "Multi-Robot Scalability",
+  "generated_at": "2026-09-26T23:31:21.766556+00:00",
+  "config": {
+    "acs": "fake, real WebSocket server (harness/fake_acs_server.py)",
+    "client_counts": [
+      1,
+      2,
+      4,
+      8
+    ]
+  },
+  "metrics": {
+    "1": {
+      "n_clients": 1,
+      "connections_seen": 1,
+      "concurrent_peak": 1,
+      "throughput_requests_per_second": 81.37275839078887,
+      "success_rate": 1.0,
+      "latency_seconds": {
+        "n": 1,
+        "mean": 0.012167417007731274,
+        "stdev": 0.0,
+        "ci95_low": 0.012167417007731274,
+        "ci95_high": 0.012167417007731274
+      },
+      "all_requests_correctly_isolated": true
+    },
+    "2": {
+      "n_clients": 2,
+      "connections_seen": 2,
+      "concurrent_peak": 2,
+      "throughput_requests_per_second": 983.8481630686916,
+      "success_rate": 1.0,
+      "latency_seconds": {
+        "n": 2,
+        "mean": 0.0017980414995690808,
+        "stdev": 0.00014065555800974307,
+        "ci95_low": 0.0016031028417637571,
+        "ci95_high": 0.0019929801573744044
+      },
+      "all_requests_correctly_isolated": true
+    },
+    "4": {
+      "n_clients": 4,
+      "connections_seen": 4,
+      "concurrent_peak": 4,
+      "throughput_requests_per_second": 1294.8478655180966,
+      "success_rate": 1.0,
+      "latency_seconds": {
+        "n": 4,
+        "mean": 0.0027710104986908846,
+        "stdev": 0.00027112543687738105,
+        "ci95_low": 0.0025053075705510513,
+        "ci95_high": 0.003036713426830718
+      },
+      "all_requests_correctly_isolated": true
+    },
+    "8": {
+      "n_clients": 8,
+      "connections_seen": 8,
+      "concurrent_peak": 8,
+      "throughput_requests_per_second": 1510.181930037861,
+      "success_rate": 1.0,
+      "latency_seconds": {
+        "n": 8,
+        "mean": 0.004560401250273571,
+        "stdev": 0.00042492739483414814,
+        "ci95_low": 0.004265941588722395,
+        "ci95_high": 0.0048548609118247476
+      },
+      "all_requests_correctly_isolated": true
+    }
+  },
+  "notes": "Requests stay correctly associated with their originating robot by construction, not by any request-ID matching logic: each robot opens its own dedicated WebSocket connection (CollectiveOSBridge.run_task connects fresh per call), so there is no shared channel where cross-talk between robots could even occur at the transport level. The real production concern this doesn't cover is CollectiveOS's single shared NavAgent instance under concurrent load (a resource-contention question - e.g. 8 real desktop-automation loops on one screen - not a correctness/isolation one), which needs a real CollectiveOS instance and is out of scope for a fake-ACS experiment.",
+  "trials": [
+    {
+      "n_clients": 1,
+      "connections_seen": 1,
+      "concurrent_peak": 1,
+      "throughput_requests_per_second": 81.37275839078887,
+      "success_rate": 1.0,
+      "latency_seconds": {
+        "n": 1,
+        "mean": 0.012167417007731274,
+        "stdev": 0.0,
+        "ci95_low": 0.012167417007731274,
+        "ci95_high": 0.012167417007731274
+      },
+      "all_requests_correctly_isolated": true
+    },
+    {
+      "n_clients": 2,
+      "connections_seen": 2,
+      "concurrent_peak": 2,
+      "throughput_requests_per_second": 983.8481630686916,
+      "success_rate": 1.0,
+      "latency_seconds": {
+        "n": 2,
+        "mean": 0.0017980414995690808,
+        "stdev": 0.00014065555800974307,
+        "ci95_low": 0.0016031028417637571,
+        "ci95_high": 0.0019929801573744044
+      },
+      "all_requests_correctly_isolated": true
+    },
+    {
+      "n_clients": 4,
+      "connections_seen": 4,
+      "concurrent_peak": 4,
+      "throughput_requests_per_second": 1294.8478655180966,
+      "success_rate": 1.0,
+      "latency_seconds": {
+        "n": 4,
+        "mean": 0.0027710104986908846,
+        "stdev": 0.00027112543687738105,
+        "ci95_low": 0.0025053075705510513,
+        "ci95_high": 0.003036713426830718
+      },
+      "all_requests_correctly_isolated": true
+    },
+    {
+      "n_clients": 8,
+      "connections_seen": 8,
+      "concurrent_peak": 8,
+      "throughput_requests_per_second": 1510.181930037861,
+      "success_rate": 1.0,
+      "latency_seconds": {
+        "n": 8,
+        "mean": 0.004560401250273571,
+        "stdev": 0.00042492739483414814,
+        "ci95_low": 0.004265941588722395,
+        "ci95_high": 0.0048548609118247476
+      },
+      "all_requests_correctly_isolated": true
+    }
+  ]
+}

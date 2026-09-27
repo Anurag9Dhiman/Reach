@@ -1,0 +1,67 @@
+{
+  "experiment_id": "E31",
+  "title": "Robustness to ACS Errors",
+  "generated_at": "2026-09-26T23:33:32.717018+00:00",
+  "config": {
+    "acs": "fake (FaultyCollectiveOSBridge, one output type per trial)"
+  },
+  "metrics": {
+    "accepted_as_success": {
+      "correct_result": true,
+      "incomplete_result": true,
+      "incorrect_result": true,
+      "ambiguous_result": true,
+      "explicit_failure": false
+    },
+    "semantic_verification_exists": false,
+    "content_based_recovery_mechanisms_exist": false
+  },
+  "notes": "3 of 5 output types (correct, incomplete, incorrect, ambiguous - everything except explicit_failure) are accepted as success identically, because PAR only checks the ACS's self-reported status, never the content of its answer. PAR has no clarification-request, automatic-retry, or content-based alternative-action mechanism for any of these cases today - 'choosing an alternative action' after a bad result is only possible in the sense that a planner's *next* step could react to a result.message that says something went wrong, and only for explicit_failure does the message actually say that. This is the same limitation e22's incorrect_result_accepted category and the paper's Discussion both already name; this experiment is the dedicated, systematic version of that finding across all 5 requested output types.",
+  "trials": [
+    {
+      "output_type": "correct_result",
+      "par_treated_as_success": true,
+      "task_reached_complete": true,
+      "message": "task completed correctly",
+      "par_requested_clarification": false,
+      "par_retried_automatically": false,
+      "par_chose_alternative_action": false
+    },
+    {
+      "output_type": "incomplete_result",
+      "par_treated_as_success": true,
+      "task_reached_complete": true,
+      "message": "",
+      "par_requested_clarification": false,
+      "par_retried_automatically": false,
+      "par_chose_alternative_action": false
+    },
+    {
+      "output_type": "incorrect_result",
+      "par_treated_as_success": true,
+      "task_reached_complete": true,
+      "message": "the wrong answer, presented as if correct",
+      "par_requested_clarification": false,
+      "par_retried_automatically": false,
+      "par_chose_alternative_action": false
+    },
+    {
+      "output_type": "ambiguous_result",
+      "par_treated_as_success": true,
+      "task_reached_complete": true,
+      "message": "it might be done, or it might not, unclear",
+      "par_requested_clarification": false,
+      "par_retried_automatically": false,
+      "par_chose_alternative_action": false
+    },
+    {
+      "output_type": "explicit_failure",
+      "par_treated_as_success": false,
+      "task_reached_complete": false,
+      "message": "the requested application could not be found",
+      "par_requested_clarification": false,
+      "par_retried_automatically": false,
+      "par_chose_alternative_action": false
+    }
+  ]
+}
