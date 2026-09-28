@@ -1,0 +1,1649 @@
+{
+  "experiment_id": "E27",
+  "title": "Imitation Learning from Delegated Demonstrations",
+  "generated_at": "2026-09-27T16:32:44.032227+00:00",
+  "config": {
+    "policy": "nearest-neighbor task-text lookup (toy POC, not a trained model)",
+    "min_demos_required": 3
+  },
+  "metrics": {
+    "n_demonstrations_available": 14,
+    "n_training": 13,
+    "held_out_task": "Log the reading 42.8 from the red_object.",
+    "held_out_actual_first_action": {
+      "action": "spotlight",
+      "text": "log.txt",
+      "reason": "Opening the log file on the desktop."
+    },
+    "toy_policy_prediction": {
+      "predicted_first_action": {
+        "action": "spotlight",
+        "text": "log",
+        "reason": "Opening the log application to locate the red_object entry."
+      },
+      "matched_training_task": "Log the reading 'X-982' from the red_object.",
+      "word_overlap": 5
+    },
+    "note": "illustrative proof-of-concept only - see module docstring"
+  },
+  "notes": "This is a proof-of-concept illustrating the pipeline shape (collect demonstrations -> hold one out -> predict its first action from the rest), not a real imitation-learning result - a real E27 needs orders of magnitude more demonstrations and an actual model architecture (e.g. a small vision-language-action model fine-tuned on screenshot+action pairs), which is a dedicated ML project beyond this experiment's scope, per the original scope decision.",
+  "trials": [
+    {
+      "task": "What is today's date?",
+      "steps": 4,
+      "demos": [
+        {
+          "action": {
+            "action": "click",
+            "x": 953,
+            "y": 15,
+            "reason": "Clicking on the date and time in the menu bar to view the full date."
+          },
+          "app": "Code",
+          "timestamp": 1790524048.392234
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 953,
+            "y": 15,
+            "reason": "Clicking on the date and time display in the menu bar to open the Notification Center."
+          },
+          "app": "Code",
+          "timestamp": 1790524061.311868
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 953,
+            "y": 15,
+            "reason": "Clicking on the date and time in the menu bar to view the full date."
+          },
+          "app": "Code",
+          "timestamp": 1790524067.1702662
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 953,
+            "y": 15,
+            "reason": "Clicking on the date and time in the menu bar to view the calendar."
+          },
+          "app": "Code",
+          "timestamp": 1790524074.788053
+        }
+      ]
+    },
+    {
+      "task": "Log the reading 'X-982' from the red_object.",
+      "steps": 20,
+      "demos": [
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "log",
+            "reason": "Opening the log application to locate the red_object entry."
+          },
+          "app": "Code",
+          "timestamp": 1790524222.385034
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "log",
+            "reason": "Opening the log application to find the red_object entry."
+          },
+          "app": "Code",
+          "timestamp": 1790524228.8513842
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "log",
+            "reason": "Opening the log application to locate the red_object entry."
+          },
+          "app": "Code",
+          "timestamp": 1790524240.503979
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Switching strategy to open Notes via Spotlight as previous attempts to interact with the current screen failed."
+          },
+          "app": "Code",
+          "timestamp": 1790524247.8431208
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Switching to Notes app to log the data as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790524257.4768908
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Switching to Notes app to log the data as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790524272.326905
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Switching strategy to open TextEdit via Spotlight to log the data."
+          },
+          "app": "Code",
+          "timestamp": 1790524277.58764
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Opening TextEdit via Spotlight to log the data as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790524285.5714638
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Opening TextEdit via Spotlight to log the data as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790524296.6663291
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Excel",
+            "reason": "The previous attempts to use spotlight failed, but it is the most direct way to launch Excel as per the plan."
+          },
+          "app": "Code",
+          "timestamp": 1790524304.464204
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Excel",
+            "reason": "The previous attempts to use spotlight failed, but it is the most reliable way to launch Excel. Retrying with a direct command."
+          },
+          "app": "Code",
+          "timestamp": 1790524318.940427
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Excel",
+            "reason": "The previous attempts to use spotlight failed, but it is the most reliable way to launch the application. Retrying to open Excel."
+          },
+          "app": "Code",
+          "timestamp": 1790524334.543893
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "cmd+space",
+            "reason": "Opening Spotlight to launch Terminal as the previous attempts failed."
+          },
+          "app": "Code",
+          "timestamp": 1790524342.194936
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Terminal",
+            "reason": "Opening Terminal to log the reading as requested in the plan."
+          },
+          "app": "Code",
+          "timestamp": 1790524349.8204741
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "nano log.txt",
+            "reason": "Typing the command to create the log file in the existing terminal."
+          },
+          "app": "Code",
+          "timestamp": 1790524356.489422
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Terminal",
+            "reason": "Opening Terminal to log the reading as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790524365.393287
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "nano log.txt",
+            "reason": "The terminal is already open and focused, so I will type the command to create the log file."
+          },
+          "app": "Code",
+          "timestamp": 1790524372.356149
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Terminal",
+            "reason": "Opening Terminal to log the reading as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790524379.497539
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "cmd+space",
+            "reason": "Open Spotlight to launch Terminal."
+          },
+          "app": "Code",
+          "timestamp": 1790524387.5592508
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Terminal",
+            "reason": "Opening Terminal to log the reading as requested in the plan."
+          },
+          "app": "Code",
+          "timestamp": 1790524393.768159
+        }
+      ]
+    },
+    {
+      "task": "Log the reading \"42\" from the red_object.",
+      "steps": 18,
+      "demos": [
+        {
+          "action": {
+            "action": "type_text",
+            "text": "42",
+            "reason": "Typing the reading 42 into the input field as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790524401.546506
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "cmd+a",
+            "reason": "Select all existing text in the input field to clear it before typing the new reading."
+          },
+          "app": "Code",
+          "timestamp": 1790524409.702141
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "cmd+a",
+            "reason": "Select all text in the input field to clear it before typing the new value."
+          },
+          "app": "Code",
+          "timestamp": 1790524415.761441
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "42",
+            "reason": "Typing the reading 42 into the input field."
+          },
+          "app": "Code",
+          "timestamp": 1790524421.941775
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 658,
+            "y": 598,
+            "reason": "Clicking the input field to clear the existing text and prepare for typing the reading."
+          },
+          "app": "Code",
+          "timestamp": 1790524427.214144
+        },
+        {
+          "action": {
+            "action": "show_desktop",
+            "reason": "The red_object icon is on the desktop, so I need to show the desktop to access it."
+          },
+          "app": "Code",
+          "timestamp": 1790524450.2967181
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "red_object",
+            "reason": "The red_object is not visible on the desktop, so I will search for it using Spotlight."
+          },
+          "app": "Code",
+          "timestamp": 1790524460.761236
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 500,
+            "y": 553,
+            "reason": "Clicking the Reload Window button to resolve the connection error."
+          },
+          "app": "Code",
+          "timestamp": 1790524468.443669
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 500,
+            "y": 553,
+            "reason": "Clicking the Reload Window button to resolve the connection error."
+          },
+          "app": "Code",
+          "timestamp": 1790524473.322119
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 500,
+            "y": 553,
+            "reason": "Click the Reload Window button to resolve the connection error."
+          },
+          "app": "Code",
+          "timestamp": 1790524483.288567
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "escape",
+            "reason": "Dismiss the error dialog to interact with the application."
+          },
+          "app": "Code",
+          "timestamp": 1790524487.7148921
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "escape",
+            "reason": "Dismiss the error dialog as per the execution plan."
+          },
+          "app": "Code",
+          "timestamp": 1790524494.88567
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "esc",
+            "reason": "Dismiss the error dialog as per the execution plan."
+          },
+          "app": "Code",
+          "timestamp": 1790524500.530504
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "esc",
+            "reason": "Dismiss the error dialog as per the execution plan."
+          },
+          "app": "Code",
+          "timestamp": 1790524508.430275
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "esc",
+            "reason": "Dismiss the error dialog as per the execution plan."
+          },
+          "app": "Code",
+          "timestamp": 1790524524.198703
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "esc",
+            "reason": "Dismiss the error dialog as per the execution plan."
+          },
+          "app": "Code",
+          "timestamp": 1790524531.304629
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "esc",
+            "reason": "Dismiss the error dialog as per the execution plan."
+          },
+          "app": "Code",
+          "timestamp": 1790524537.295601
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "escape",
+            "reason": "Dismiss the error dialog as per the execution plan."
+          },
+          "app": "Code",
+          "timestamp": 1790524547.412627
+        }
+      ]
+    },
+    {
+      "task": "Look up which container the red_object belongs in.",
+      "steps": 20,
+      "demos": [
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder to locate the red_object file."
+          },
+          "app": "Code",
+          "timestamp": 1790524565.917433
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder to locate the red_object file."
+          },
+          "app": "Code",
+          "timestamp": 1790524577.59059
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder to locate the red_object file."
+          },
+          "app": "Code",
+          "timestamp": 1790524586.79351
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder to locate the red_object file."
+          },
+          "app": "Code",
+          "timestamp": 1790524611.4364421
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder to locate the red_object file."
+          },
+          "app": "Code",
+          "timestamp": 1790524616.272576
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder to locate the red_object file."
+          },
+          "app": "Code",
+          "timestamp": 1790524625.3892102
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "red_object",
+            "reason": "Searching for the red_object using Spotlight to locate its container."
+          },
+          "app": "Code",
+          "timestamp": 1790524633.330884
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "red_object",
+            "reason": "Searching for the red_object using Spotlight to identify its location."
+          },
+          "app": "Code",
+          "timestamp": 1790524638.029143
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "red_object",
+            "reason": "Searching for the red_object using Spotlight to locate its container."
+          },
+          "app": "Code",
+          "timestamp": 1790524651.100961
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "cmd+`",
+            "reason": "Switching to the terminal window to search for the file."
+          },
+          "app": "Code",
+          "timestamp": 1790524659.1491132
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "terminal",
+            "reason": "Opening terminal to search for the red_object file path."
+          },
+          "app": "Code",
+          "timestamp": 1790524665.576371
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "terminal",
+            "reason": "Opening terminal to search for the file path of red_object."
+          },
+          "app": "Code",
+          "timestamp": 1790524671.1470459
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "terminal",
+            "reason": "Opening terminal to search for the file path of red_object."
+          },
+          "app": "Code",
+          "timestamp": 1790524684.627386
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "escape",
+            "reason": "Dismiss the error dialog in the terminal."
+          },
+          "app": "Code",
+          "timestamp": 1790524689.74432
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "escape",
+            "reason": "Dismiss the error dialog in the terminal."
+          },
+          "app": "Code",
+          "timestamp": 1790524694.335499
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "escape",
+            "reason": "Dismiss the error dialog in the terminal."
+          },
+          "app": "Code",
+          "timestamp": 1790524698.882505
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "escape",
+            "reason": "Dismiss the error dialog in the terminal."
+          },
+          "app": "Code",
+          "timestamp": 1790524705.365576
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "escape",
+            "reason": "Dismiss the error dialog in the terminal."
+          },
+          "app": "Code",
+          "timestamp": 1790524712.467098
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "escape",
+            "reason": "Dismiss the error dialog in the terminal."
+          },
+          "app": "Code",
+          "timestamp": 1790524717.817086
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "escape",
+            "reason": "Dismiss the error dialog in the terminal."
+          },
+          "app": "Code",
+          "timestamp": 1790524723.0213919
+        }
+      ]
+    },
+    {
+      "task": "look up which container the red_object belongs in",
+      "steps": 20,
+      "demos": [
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder to locate the red_object file."
+          },
+          "app": "Code",
+          "timestamp": 1790524927.5681548
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder to locate the red_object file."
+          },
+          "app": "Code",
+          "timestamp": 1790524938.1492338
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder to locate the red_object file."
+          },
+          "app": "Code",
+          "timestamp": 1790524952.244224
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "red_object",
+            "reason": "Searching for red_object using Spotlight to locate its container."
+          },
+          "app": "Code",
+          "timestamp": 1790524957.488016
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "red_object",
+            "reason": "Using spotlight to locate the file red_object as previous attempts failed."
+          },
+          "app": "Code",
+          "timestamp": 1790524977.6387908
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "red_object",
+            "reason": "Searching for the file 'red_object' using Spotlight to identify its location."
+          },
+          "app": "Code",
+          "timestamp": 1790524999.182822
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "red_object"
+          },
+          "app": "Code",
+          "timestamp": 1790525004.6553311
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "red_object"
+          },
+          "app": "Code",
+          "timestamp": 1790525009.9897542
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "red_object",
+            "reason": "Searching for the file red_object using Spotlight to locate its container."
+          },
+          "app": "Code",
+          "timestamp": 1790525019.68014
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "find / -name red_object\n",
+            "reason": "Typing the search command directly into the existing terminal window."
+          },
+          "app": "Code",
+          "timestamp": 1790525025.280087
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "find . -name red_object",
+            "reason": "Searching for the red_object in the current directory using the terminal."
+          },
+          "app": "Code",
+          "timestamp": 1790525038.180128
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "find / -name red_object",
+            "reason": "Typing the command into the existing terminal to locate the file."
+          },
+          "app": "Code",
+          "timestamp": 1790525047.917498
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "find / -name red_object\n",
+            "reason": "Executing the search command in the existing terminal to locate the red_object."
+          },
+          "app": "Code",
+          "timestamp": 1790525057.276046
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "find / -name red_object\n",
+            "reason": "Executing the search command in the terminal to locate the red_object."
+          },
+          "app": "Code",
+          "timestamp": 1790525064.1279712
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "find / -name red_object",
+            "reason": "Searching for the red_object file in the terminal to identify its container."
+          },
+          "app": "Code",
+          "timestamp": 1790525068.615442
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "find / -name red_object",
+            "reason": "Searching for the red_object file in the terminal to identify its container."
+          },
+          "app": "Code",
+          "timestamp": 1790525076.390358
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "find / -name red_object",
+            "reason": "Searching for the red_object file in the terminal to identify its container."
+          },
+          "app": "Code",
+          "timestamp": 1790525081.576909
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "find / -name red_object",
+            "reason": "Searching for the red_object file in the terminal to identify its container."
+          },
+          "app": "Code",
+          "timestamp": 1790525086.511165
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "find / -name red_object",
+            "reason": "Searching for the red_object in the terminal to identify its container."
+          },
+          "app": "Code",
+          "timestamp": 1790525091.219023
+        },
+        {
+          "action": {
+            "action": "type_text",
+            "text": "find / -name red_object",
+            "reason": "Searching for the red_object file in the terminal to identify its container."
+          },
+          "app": "Code",
+          "timestamp": 1790525095.977341
+        }
+      ]
+    },
+    {
+      "task": "log that the red_object was inspected and found.",
+      "steps": 20,
+      "demos": [
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "logs",
+            "reason": "Opening the logs folder in VS Code to find the log file."
+          },
+          "app": "Code",
+          "timestamp": 1790525473.649276
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 254,
+            "y": 581,
+            "reason": "Clicking on the logs folder in the explorer to expand it and find the log file."
+          },
+          "app": "Code",
+          "timestamp": 1790525480.843227
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 250,
+            "y": 575,
+            "reason": "Clicking on the logs folder in the VS Code explorer to open it."
+          },
+          "app": "Code",
+          "timestamp": 1790525494.696488
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Opening Notes application via Spotlight to create the inspection log."
+          },
+          "app": "Code",
+          "timestamp": 1790525503.09091
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Switching strategy to open Notes via Spotlight as requested in the plan."
+          },
+          "app": "Code",
+          "timestamp": 1790525514.87111
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Switching strategy to open Notes via Spotlight as previous attempts to interact with the current window failed."
+          },
+          "app": "Code",
+          "timestamp": 1790525536.631545
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Switching strategy to open TextEdit via Spotlight to log the inspection."
+          },
+          "app": "Code",
+          "timestamp": 1790525549.8390028
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Switching to TextEdit to log the inspection as requested, as the current environment is occupied by VS Code."
+          },
+          "app": "Code",
+          "timestamp": 1790525555.663261
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Opening TextEdit via Spotlight to create the inspection log as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790525570.8233972
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Launching TextEdit via Spotlight to log the inspection as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790525583.95555
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Switching to TextEdit to log the inspection as requested, as the current environment is not suitable for logging."
+          },
+          "app": "Code",
+          "timestamp": 1790525598.150532
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Launching TextEdit via Spotlight to log the inspection result."
+          },
+          "app": "Code",
+          "timestamp": 1790525653.890367
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Opening Notes via Spotlight to log the inspection result."
+          },
+          "app": "Code",
+          "timestamp": 1790525659.839746
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Opening Notes via Spotlight to log the inspection result."
+          },
+          "app": "Code",
+          "timestamp": 1790525667.912271
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Switching strategy to open Notes via Spotlight as previous attempts to interact with the current window failed."
+          },
+          "app": "Code",
+          "timestamp": 1790525674.881588
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Opening Notes application to log the inspection result."
+          },
+          "app": "Code",
+          "timestamp": 1790525682.1711822
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Opening Notes application to log the inspection result."
+          },
+          "app": "Code",
+          "timestamp": 1790525690.1680698
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Opening Notes app to log the inspection result."
+          },
+          "app": "Code",
+          "timestamp": 1790525707.198381
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Opening Notes application to log the inspection result."
+          },
+          "app": "Code",
+          "timestamp": 1790525715.305119
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Opening Notes app to log the inspection result."
+          },
+          "app": "Code",
+          "timestamp": 1790525724.412947
+        }
+      ]
+    },
+    {
+      "task": "What is today's date?",
+      "steps": 5,
+      "demos": [
+        {
+          "action": {
+            "action": "click",
+            "x": 953,
+            "y": 15,
+            "reason": "Clicking the date and time in the menu bar to view the calendar."
+          },
+          "app": "Code",
+          "timestamp": 1790525671.1510699
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 953,
+            "y": 15,
+            "reason": "Clicking on the date and time in the menu bar to view the calendar."
+          },
+          "app": "Code",
+          "timestamp": 1790525685.065269
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 953,
+            "y": 15,
+            "reason": "Clicking on the date and time in the menu bar to view the calendar."
+          },
+          "app": "Code",
+          "timestamp": 1790525695.722306
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 953,
+            "y": 15,
+            "reason": "Clicking on the date and time in the menu bar to view the full date."
+          },
+          "app": "Code",
+          "timestamp": 1790525703.7574909
+        },
+        {
+          "action": {
+            "action": "click",
+            "x": 953,
+            "y": 15,
+            "reason": "Clicking the date and time in the menu bar to view the calendar."
+          },
+          "app": "Code",
+          "timestamp": 1790525710.4481459
+        }
+      ]
+    },
+    {
+      "task": "What is today's date?",
+      "steps": 1,
+      "demos": [
+        {
+          "action": {
+            "action": "click",
+            "x": 953,
+            "y": 15,
+            "reason": "Clicking on the date and time in the menu bar to view the current date."
+          },
+          "app": "Code",
+          "timestamp": 1790525947.441761
+        }
+      ]
+    },
+    {
+      "task": "What is the current weather?",
+      "steps": 20,
+      "demos": [
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening the weather app to check the current weather."
+          },
+          "app": "Code",
+          "timestamp": 1790525765.566008
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening Spotlight to search for the Weather app."
+          },
+          "app": "Code",
+          "timestamp": 1790525771.44353
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening Spotlight to search for the Weather app as per the execution plan."
+          },
+          "app": "Code",
+          "timestamp": 1790525776.853191
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening Spotlight to search for the Weather app."
+          },
+          "app": "Code",
+          "timestamp": 1790525783.753715
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening Spotlight to search for the Weather app as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790525793.882699
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening the Weather app via Spotlight to check the current weather."
+          },
+          "app": "Code",
+          "timestamp": 1790525813.561752
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Safari",
+            "reason": "Opening Safari via Spotlight to check the weather."
+          },
+          "app": "Code",
+          "timestamp": 1790525821.918905
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Safari",
+            "reason": "Opening Safari via Spotlight to check the weather."
+          },
+          "app": "Code",
+          "timestamp": 1790525835.2045949
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Safari",
+            "reason": "Opening Safari to check the weather as per the instructions."
+          },
+          "app": "Code",
+          "timestamp": 1790525853.636655
+        },
+        {
+          "action": {
+            "action": "key_press",
+            "text": "esc",
+            "reason": "Closing the AI chat window to clear the screen and proceed with the task."
+          },
+          "app": "Code",
+          "timestamp": 1790525868.778374
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening Spotlight to search for weather information."
+          },
+          "app": "Code",
+          "timestamp": 1790525874.253818
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening Spotlight to search for the weather."
+          },
+          "app": "Code",
+          "timestamp": 1790525879.1704938
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening Spotlight to search for weather as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790525894.882275
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Using spotlight to open the weather app as requested in the plan."
+          },
+          "app": "Code",
+          "timestamp": 1790525917.797386
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening the Weather app via Spotlight to check the current weather."
+          },
+          "app": "Code",
+          "timestamp": 1790525933.241129
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening the Weather app via Spotlight to check the current weather."
+          },
+          "app": "Code",
+          "timestamp": 1790525945.820976
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Using spotlight to open the weather app as requested in the execution plan."
+          },
+          "app": "Code",
+          "timestamp": 1790525950.323184
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening Spotlight to search for the weather app."
+          },
+          "app": "Code",
+          "timestamp": 1790525967.4846568
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening Spotlight to search for the weather app."
+          },
+          "app": "Code",
+          "timestamp": 1790525977.356481
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "weather",
+            "reason": "Opening Spotlight to search for the weather app."
+          },
+          "app": "Code",
+          "timestamp": 1790525991.3841238
+        }
+      ]
+    },
+    {
+      "task": "look up today's date",
+      "steps": 1,
+      "demos": [
+        {
+          "action": {
+            "action": "click",
+            "x": 1240,
+            "y": 15,
+            "reason": "Clicking the date and time in the menu bar to view the current date."
+          },
+          "app": "Code",
+          "timestamp": 1790526008.570665
+        }
+      ]
+    },
+    {
+      "task": "look up the current weather",
+      "steps": 0,
+      "demos": []
+    },
+    {
+      "task": "What is today's date?",
+      "steps": 0,
+      "demos": []
+    },
+    {
+      "task": "Find the specification of part number PN-4471.",
+      "steps": 20,
+      "demos": [
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Safari",
+            "reason": "Opening browser to search for part number."
+          },
+          "app": "Code",
+          "timestamp": 1790526232.384398
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Safari",
+            "reason": "Opening browser to search for part number."
+          },
+          "app": "Code",
+          "timestamp": 1790526237.8843079
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Safari",
+            "reason": "Opening browser to search for part number."
+          },
+          "app": "Code",
+          "timestamp": 1790526250.0729659
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "PN-4471",
+            "reason": "Using Spotlight to search for the file PN-4471 directly."
+          },
+          "app": "Code",
+          "timestamp": 1790526255.719315
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "PN-4471",
+            "reason": "Using Spotlight to search for the file PN-4471 directly."
+          },
+          "app": "Code",
+          "timestamp": 1790526265.123142
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "PN-4471",
+            "reason": "Using spotlight to search for the file PN-4471 as per the execution plan."
+          },
+          "app": "Code",
+          "timestamp": 1790526281.6983712
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder via Spotlight to search for the file."
+          },
+          "app": "Code",
+          "timestamp": 1790526288.781749
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Switching strategy to open Finder via Spotlight to search for the file."
+          },
+          "app": "Code",
+          "timestamp": 1790526294.1697438
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Switching strategy to open Finder via Spotlight to search for the file."
+          },
+          "app": "Code",
+          "timestamp": 1790526308.772989
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Chrome",
+            "reason": "Launching Chrome via Spotlight to search for the part specification."
+          },
+          "app": "Code",
+          "timestamp": 1790526313.973463
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Chrome",
+            "reason": "Launching Chrome to search for the part specification."
+          },
+          "app": "Code",
+          "timestamp": 1790526320.968077
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Google Chrome",
+            "reason": "Launching Chrome via Spotlight to search for the part specification."
+          },
+          "app": "Code",
+          "timestamp": 1790526335.2543821
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder via Spotlight to search for the file."
+          },
+          "app": "Code",
+          "timestamp": 1790526342.6266298
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder via Spotlight to search for the file."
+          },
+          "app": "Code",
+          "timestamp": 1790526356.602849
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Finder",
+            "reason": "Opening Finder via Spotlight to search for the file."
+          },
+          "app": "Code",
+          "timestamp": 1790526376.443952
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "PN-4471",
+            "reason": "Using spotlight to search for the file PN-4471 as previous attempts to find it via file explorer were unsuccessful."
+          },
+          "app": "Code",
+          "timestamp": 1790526381.982497
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "PN-4471",
+            "reason": "Using spotlight to search for the file PN-4471 as previous attempts failed."
+          },
+          "app": "Code",
+          "timestamp": 1790526387.767744
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "PN-4471",
+            "reason": "Using spotlight to search for the file PN-4471 directly."
+          },
+          "app": "Code",
+          "timestamp": 1790526415.516719
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Safari",
+            "reason": "Opening Safari to search for the part specification."
+          },
+          "app": "Code",
+          "timestamp": 1790526421.3297
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Safari",
+            "reason": "Opening Safari via Spotlight to search for the part specification."
+          },
+          "app": "Code",
+          "timestamp": 1790526430.0825238
+        }
+      ]
+    },
+    {
+      "task": "Log the reading 42.8 from the red_object.",
+      "steps": 20,
+      "demos": [
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "log.txt",
+            "reason": "Opening the log file on the desktop."
+          },
+          "app": "Code",
+          "timestamp": 1790526421.86815
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "logs",
+            "reason": "Opening the logs file as per the execution plan."
+          },
+          "app": "Code",
+          "timestamp": 1790526428.961637
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "log.txt",
+            "reason": "Opening the log file from the desktop."
+          },
+          "app": "Code",
+          "timestamp": 1790526447.776417
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "textedit",
+            "reason": "Opening TextEdit via Spotlight to edit the red_object file as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790526453.50912
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "textedit",
+            "reason": "Switching to TextEdit to open the logs folder as requested in the plan."
+          },
+          "app": "Code",
+          "timestamp": 1790526461.210984
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "textedit",
+            "reason": "Opening TextEdit via Spotlight to log the reading as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790526474.703451
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Switching to TextEdit as requested in the plan since the previous attempts to use VS Code were not successful."
+          },
+          "app": "Code",
+          "timestamp": 1790526485.237997
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Switching to TextEdit to log the reading as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790526491.599375
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Switching strategy to open TextEdit via Spotlight to log the reading."
+          },
+          "app": "Code",
+          "timestamp": 1790526501.981981
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Opening Notes app via Spotlight to log the reading."
+          },
+          "app": "Code",
+          "timestamp": 1790526506.777045
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Opening Notes app via Spotlight to log the reading."
+          },
+          "app": "Code",
+          "timestamp": 1790526513.7687979
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Notes",
+            "reason": "Opening Notes app via Spotlight to log the reading."
+          },
+          "app": "Code",
+          "timestamp": 1790526530.210363
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Numbers",
+            "reason": "Launching Numbers to log the reading."
+          },
+          "app": "Code",
+          "timestamp": 1790526541.3246799
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Numbers",
+            "reason": "Launching Numbers application via Spotlight to create the spreadsheet."
+          },
+          "app": "Code",
+          "timestamp": 1790526553.676167
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Numbers",
+            "reason": "Launching Numbers to create the spreadsheet as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790526566.6452532
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Calculator",
+            "reason": "Launching Calculator via Spotlight to perform the requested task."
+          },
+          "app": "Code",
+          "timestamp": 1790526571.946283
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Calculator",
+            "reason": "Launching Calculator via Spotlight to perform the requested task."
+          },
+          "app": "Code",
+          "timestamp": 1790526577.109357
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "Calculator",
+            "reason": "Launching Calculator via Spotlight to perform the requested calculation."
+          },
+          "app": "Code",
+          "timestamp": 1790526596.1566541
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Opening TextEdit to create the log file as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790526601.452269
+        },
+        {
+          "action": {
+            "action": "spotlight",
+            "text": "TextEdit",
+            "reason": "Opening TextEdit to log the reading as requested."
+          },
+          "app": "Code",
+          "timestamp": 1790526609.062104
+        }
+      ]
+    }
+  ]
+}

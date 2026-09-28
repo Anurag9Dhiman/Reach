@@ -1,0 +1,293 @@
+{
+  "experiment_id": "E19",
+  "title": "Planner Comparison",
+  "generated_at": "2026-09-27T15:34:34.758970+00:00",
+  "config": {
+    "acs": "fake (FaultyCollectiveOSBridge, mode=SUCCESS)",
+    "planners_compared": [
+      "rule_based",
+      "gemini"
+    ],
+    "note": "GeminiPlanner vs RuleBasedPlanner only - no second LLM key available, see README.md",
+    "n_tasks": 13
+  },
+  "metrics": {
+    "rule_based": {
+      "task_success_rate": 0.0,
+      "correct_delegation_rate": 0.23076923076923078,
+      "crash_rate": 0.15384615384615385,
+      "total_replans": 0,
+      "mean_latency_seconds": 0.0002211666142102331
+    },
+    "gemini": {
+      "task_success_rate": 0.6923076923076923,
+      "correct_delegation_rate": 0.6923076923076923,
+      "crash_rate": 0.3076923076923077,
+      "total_replans": 0,
+      "mean_latency_seconds": 7.1496466667718215
+    }
+  },
+  "notes": "The Reach architecture (safety kernel, delegation plumbing, ACS bridge) is planner-agnostic by construction, but its *effectiveness* is not: rule_based's task_success_rate is expected near 0 because RuleBasedPlanner cannot parse natural-language goals for delegation intent or produce real move coordinates (see module docstring), while gemini's is expected much higher. This is the honest answer to the RQ - Reach 'works' independently of which planner is plugged in only in the sense that it doesn't crash or misbehave unsafely; task-level effectiveness genuinely depends on the planner's own reasoning capability. token_usage was not tracked - GeminiPlanner does not currently expose response.usage_metadata to its caller, which would need a small addition to par.core.gemini_planner to measure directly.",
+  "trials": [
+    {
+      "planner": "rule_based",
+      "task_id": "phys-1",
+      "task_success": false,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": true,
+      "n_replans": 0,
+      "latency_seconds": 0.0006350839976221323
+    },
+    {
+      "planner": "rule_based",
+      "task_id": "phys-2",
+      "task_success": false,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": true,
+      "n_replans": 0,
+      "latency_seconds": 0.00012116599828004837
+    },
+    {
+      "planner": "rule_based",
+      "task_id": "phys-3",
+      "task_success": false,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": true,
+      "n_replans": 0,
+      "latency_seconds": 0.0003432910016272217
+    },
+    {
+      "planner": "rule_based",
+      "task_id": "dig-1",
+      "task_success": false,
+      "crashed": true,
+      "crash_reason": "no skill in ['detect', 'move', 'pick', 'place', 'stop', 'inspect', 'use_computer'] matches goal 'Look up today's date using the computer.'",
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 1.1833995813503861e-05
+    },
+    {
+      "planner": "rule_based",
+      "task_id": "dig-2",
+      "task_success": false,
+      "crashed": true,
+      "crash_reason": "no skill in ['detect', 'move', 'pick', 'place', 'stop', 'inspect', 'use_computer'] matches goal 'Search the computer for the specification of part number PN-4471.'",
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 9.332987247034907e-06
+    },
+    {
+      "planner": "rule_based",
+      "task_id": "p2d-1",
+      "task_success": false,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 7.19579984433949e-05
+    },
+    {
+      "planner": "rule_based",
+      "task_id": "p2d-2",
+      "task_success": false,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 0.00030004099244251847
+    },
+    {
+      "planner": "rule_based",
+      "task_id": "d2p-1",
+      "task_success": false,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 0.00027983399922959507
+    },
+    {
+      "planner": "rule_based",
+      "task_id": "d2p-2",
+      "task_success": false,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 6.091702380217612e-05
+    },
+    {
+      "planner": "rule_based",
+      "task_id": "multi-1",
+      "task_success": false,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 0.00026445899857208133
+    },
+    {
+      "planner": "rule_based",
+      "task_id": "multi-2",
+      "task_success": false,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 0.000283040979411453
+    },
+    {
+      "planner": "rule_based",
+      "task_id": "multidel-1",
+      "task_success": false,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 0.0002741249918472022
+    },
+    {
+      "planner": "rule_based",
+      "task_id": "multidel-2",
+      "task_success": false,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 0.00022008302039466798
+    },
+    {
+      "planner": "gemini",
+      "task_id": "phys-1",
+      "task_success": true,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": true,
+      "n_replans": 0,
+      "latency_seconds": 11.643064000003505
+    },
+    {
+      "planner": "gemini",
+      "task_id": "phys-2",
+      "task_success": true,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": true,
+      "n_replans": 0,
+      "latency_seconds": 6.163938541983953
+    },
+    {
+      "planner": "gemini",
+      "task_id": "phys-3",
+      "task_success": true,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": true,
+      "n_replans": 0,
+      "latency_seconds": 11.780998999980511
+    },
+    {
+      "planner": "gemini",
+      "task_id": "dig-1",
+      "task_success": true,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": true,
+      "n_replans": 0,
+      "latency_seconds": 6.878997583000455
+    },
+    {
+      "planner": "gemini",
+      "task_id": "dig-2",
+      "task_success": true,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": true,
+      "n_replans": 0,
+      "latency_seconds": 6.147174999990966
+    },
+    {
+      "planner": "gemini",
+      "task_id": "p2d-1",
+      "task_success": true,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": true,
+      "n_replans": 0,
+      "latency_seconds": 4.03753637499176
+    },
+    {
+      "planner": "gemini",
+      "task_id": "p2d-2",
+      "task_success": false,
+      "crashed": true,
+      "crash_reason": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.",
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 0.3839240420202259
+    },
+    {
+      "planner": "gemini",
+      "task_id": "d2p-1",
+      "task_success": false,
+      "crashed": true,
+      "crash_reason": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.",
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 0.4225334170041606
+    },
+    {
+      "planner": "gemini",
+      "task_id": "d2p-2",
+      "task_success": false,
+      "crashed": true,
+      "crash_reason": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.",
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 0.3633460420242045
+    },
+    {
+      "planner": "gemini",
+      "task_id": "multi-1",
+      "task_success": true,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": true,
+      "n_replans": 0,
+      "latency_seconds": 17.729095834016334
+    },
+    {
+      "planner": "gemini",
+      "task_id": "multi-2",
+      "task_success": true,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": true,
+      "n_replans": 0,
+      "latency_seconds": 19.1962390000117
+    },
+    {
+      "planner": "gemini",
+      "task_id": "multidel-1",
+      "task_success": true,
+      "crashed": false,
+      "crash_reason": null,
+      "correct_delegation": true,
+      "n_replans": 0,
+      "latency_seconds": 4.524337500013644
+    },
+    {
+      "planner": "gemini",
+      "task_id": "multidel-2",
+      "task_success": false,
+      "crashed": true,
+      "crash_reason": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.",
+      "correct_delegation": false,
+      "n_replans": 0,
+      "latency_seconds": 3.674220332992263
+    }
+  ]
+}
