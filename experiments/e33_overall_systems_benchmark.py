@@ -43,8 +43,12 @@ def main() -> None:
     all_results = load_all_results()
     print(f"Loaded {len(all_results)} experiment result files: {sorted(all_results.keys())}")
 
-    blocked = {eid: d for eid, d in all_results.items() if d.get("metrics", {}).get("status") == "blocked"}
-    completed = {eid: d for eid, d in all_results.items() if eid not in blocked}
+    # E33 is the aggregator itself, not one of the 33 numbered experiments -
+    # exclude its own prior-run JSON from the roll-up it computes about the
+    # other 32, or a re-run double-counts itself as "completed".
+    aggregated = {eid: d for eid, d in all_results.items() if eid != "E33"}
+    blocked = {eid: d for eid, d in aggregated.items() if d.get("metrics", {}).get("status") == "blocked"}
+    completed = {eid: d for eid, d in aggregated.items() if eid not in blocked}
 
     # -- primary metrics, pulled from whichever experiment actually measured
     #    each one, where available ------------------------------------------
@@ -55,14 +59,23 @@ def main() -> None:
         primary_metrics["task_success_rate"] = {
             "value": m.get("end_to_end_task_success_rate"),
             "source": "E1",
-            "caveat": "0/12 in the pilot run, but 100% of failures trace to exhausted free-tier "
-            "quota/transient overload, not the architecture - see E1's own report. Needs a clean "
-            "re-run once quota resets for a trustworthy number here.",
+            "caveat": "small pilot (12 trials) - see E1's own report for its failure-cause breakdown "
+            "(quota/503/max_iter/screencapture-bug/unexplained) before reading this number at face value.",
         }
-    if "E9" in all_results or "E19" in all_results:
-        primary_metrics["delegation_precision_recall"] = {"value": None, "source": "E9/E19", "caveat": "blocked on quota"}
+    if "E9" in completed:
+        m = completed["E9"]["metrics"]
+        primary_metrics["delegation_precision_recall"] = {
+            "value": {"precision": m.get("delegation_precision"), "recall": m.get("delegation_recall")},
+            "source": "E9",
+        }
+    elif "E19" in completed:
+        m = completed["E19"]["metrics"].get("gemini", {})
+        primary_metrics["delegation_precision_recall"] = {
+            "value": {"correct_delegation_rate": m.get("correct_delegation_rate")},
+            "source": "E19 (gemini arm)",
+        }
     else:
-        primary_metrics["delegation_precision_recall"] = {"value": None, "source": "E9/E19", "caveat": "not yet run (blocked on quota)"}
+        primary_metrics["delegation_precision_recall"] = {"value": None, "source": "E9/E19", "caveat": "not yet run"}
 
     if "E5" in completed:
         m = completed["E5"]["metrics"]

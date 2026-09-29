@@ -93,7 +93,10 @@ def main() -> None:
     # results/E1_*.md's notes) - classify delegation failures by cause so a
     # quota exhaustion doesn't get silently conflated with a genuine
     # architecture reliability problem.
-    failure_causes = {"quota_exhausted": 0, "transient_upstream_503": 0, "timeout": 0, "other": 0}
+    failure_causes = {
+        "quota_exhausted": 0, "transient_upstream_503": 0, "timeout": 0,
+        "acs_max_iter_exhausted": 0, "acs_screencapture_failure": 0, "other": 0,
+    }
     for t in all_trials:
         for e in t.events:
             if e.skill == "use_computer" and not e.success:
@@ -104,6 +107,20 @@ def main() -> None:
                     failure_causes["transient_upstream_503"] += 1
                 elif "timed out" in msg:
                     failure_causes["timeout"] += 1
+                elif "step limit" in msg:
+                    # NavAgent's own NAV_MAX_ITER exhaustion - a legitimate
+                    # "tried, ran out of budget" outcome, not an error.
+                    failure_causes["acs_max_iter_exhausted"] += 1
+                elif "nav_raw.png" in msg:
+                    # A real, intermittent CollectiveOS bug found via this
+                    # experiment: nav_agent.py's screencapture() runs
+                    # `screencapture -x -t png /tmp/nav_raw.png` then
+                    # immediately Image.open()s it with no existence check
+                    # or retry - fails ~20% of the time in this environment,
+                    # likely a screen-recording permission/race issue for
+                    # the automated process. Worth fixing in CollectiveOS
+                    # itself; out of scope to patch from this repo.
+                    failure_causes["acs_screencapture_failure"] += 1
                 else:
                     failure_causes["other"] += 1
 
@@ -156,8 +173,14 @@ def main() -> None:
             "GEMINI_API_KEY quota is used by every real-ACS/real-planner experiment "
             "and can exhaust mid-pilot (429 RESOURCE_EXHAUSTED) or hit transient "
             "upstream overload (503) - only 'delegation_failures_unexplained' "
-            "(failures NOT attributable to quota/503/timeout) reflects an actual "
-            "defect in the pipeline being tested."
+            "(failures NOT attributable to quota/503/timeout/max_iter/screencapture) "
+            "reflects an actual defect in the pipeline being tested. "
+            "acs_screencapture_failure is a real, intermittent CollectiveOS bug "
+            "found via this experiment (nav_agent.py's screencapture() has no "
+            "existence check or retry after calling the `screencapture` "
+            "subprocess before Image.open()-ing its output) - see the "
+            "classification code's comment for detail; worth fixing in "
+            "CollectiveOS, out of scope for this repo."
         ),
     )
     print("\nDone.")

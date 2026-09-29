@@ -1,0 +1,318 @@
+{
+  "experiment_id": "E2",
+  "title": "Mixed Physical-Digital Task Benchmark",
+  "generated_at": "2026-09-27T16:32:08.776044+00:00",
+  "config": {
+    "acs": "real (live CollectiveOS + Gemini Navigation Agent)",
+    "par_planner": "GeminiPlanner (gemini-3.1-flash-lite)",
+    "n_trials_per_task": 1,
+    "n_tasks": 13,
+    "max_steps": 8
+  },
+  "metrics": {
+    "overall_success_rate": 0.3076923076923077,
+    "n_tasks": 13,
+    "by_category": {
+      "physical_only": {
+        "n": 3,
+        "success_rate": 1.0,
+        "mean_delegations": 0.0
+      },
+      "digital_only": {
+        "n": 2,
+        "success_rate": 0.5,
+        "mean_delegations": 1.0
+      },
+      "physical_to_digital": {
+        "n": 2,
+        "success_rate": 0.0,
+        "mean_delegations": 1.0
+      },
+      "digital_to_physical": {
+        "n": 2,
+        "success_rate": 0.0,
+        "mean_delegations": 0.0
+      },
+      "multi_stage": {
+        "n": 2,
+        "success_rate": 0.0,
+        "mean_delegations": 0.0
+      },
+      "multi_delegation": {
+        "n": 2,
+        "success_rate": 0.0,
+        "mean_delegations": 0.0
+      }
+    },
+    "by_difficulty": {
+      "1": {
+        "n": 4,
+        "success_rate": 0.5
+      },
+      "2": {
+        "n": 6,
+        "success_rate": 0.16666666666666666
+      },
+      "3": {
+        "n": 3,
+        "success_rate": 0.3333333333333333
+      }
+    }
+  },
+  "notes": "1 trial per task (14 real end-to-end runs), not repeated trials per task - this is a coverage benchmark across the 6 categories x 3 difficulty levels the task library was authored to span, not a reliability study (see E1 for repeated-trials reliability on a smaller task subset). A single real Gemini/CollectiveOS call chain is inherently noisy (see E1's transient-503 findings), so any one task's pass/fail here is a single data point, not a stable rate.",
+  "trials": [
+    {
+      "index": 0,
+      "goal": "Detect the objects in the workspace.",
+      "task_success": true,
+      "wall_time_seconds": 2.4409777499968186,
+      "replans": 0,
+      "escalations": 0,
+      "error": null,
+      "steps": [
+        {
+          "skill": "detect",
+          "safety_decision": "allow",
+          "success": true,
+          "latency_seconds": 1.3390931659960188,
+          "message": "detected 2 objects"
+        }
+      ],
+      "task_id": "phys-1",
+      "category": "physical_only",
+      "difficulty": 1
+    },
+    {
+      "index": 0,
+      "goal": "Pick up the red_object and place it at the blue_container.",
+      "task_success": true,
+      "wall_time_seconds": 2.6353556249814574,
+      "replans": 0,
+      "escalations": 0,
+      "error": null,
+      "steps": [
+        {
+          "skill": "pick",
+          "safety_decision": "allow",
+          "success": true,
+          "latency_seconds": 1.0761683749733493,
+          "message": "picked 'red_object'"
+        },
+        {
+          "skill": "place",
+          "safety_decision": "allow",
+          "success": true,
+          "latency_seconds": 0.8027818330156151,
+          "message": "placed 'red_object' at 'blue_container'"
+        }
+      ],
+      "task_id": "phys-2",
+      "category": "physical_only",
+      "difficulty": 2
+    },
+    {
+      "index": 0,
+      "goal": "Inspect the red_object, then move to the blue_container, then stop.",
+      "task_success": true,
+      "wall_time_seconds": 4.2087013340205885,
+      "replans": 0,
+      "escalations": 0,
+      "error": null,
+      "steps": [
+        {
+          "skill": "inspect",
+          "safety_decision": "allow",
+          "success": true,
+          "latency_seconds": 1.0291634580062237,
+          "message": "inspected 'red_object': found"
+        },
+        {
+          "skill": "move",
+          "safety_decision": "allow",
+          "success": true,
+          "latency_seconds": 1.0923579170193989,
+          "message": "moved to {'x': -0.3, 'y': 0.4, 'z': 0}"
+        },
+        {
+          "skill": "stop",
+          "safety_decision": "allow",
+          "success": true,
+          "latency_seconds": 0.7026190830220003,
+          "message": "stopped"
+        }
+      ],
+      "task_id": "phys-3",
+      "category": "physical_only",
+      "difficulty": 3
+    },
+    {
+      "index": 0,
+      "goal": "Look up today's date using the computer.",
+      "task_success": true,
+      "wall_time_seconds": 17.49394874999416,
+      "replans": 0,
+      "escalations": 0,
+      "error": null,
+      "steps": [
+        {
+          "skill": "use_computer",
+          "safety_decision": "allow",
+          "success": true,
+          "latency_seconds": 12.82876670898986,
+          "message": "Today's date is Sunday, September 27."
+        }
+      ],
+      "task_id": "dig-1",
+      "category": "digital_only",
+      "difficulty": 1
+    },
+    {
+      "index": 0,
+      "goal": "Search the computer for the specification of part number PN-4471.",
+      "task_success": false,
+      "wall_time_seconds": 182.9096252080053,
+      "replans": 0,
+      "escalations": 0,
+      "error": null,
+      "steps": [
+        {
+          "skill": "use_computer",
+          "safety_decision": "allow",
+          "success": false,
+          "latency_seconds": 182.90939295801218,
+          "message": "action timed out"
+        }
+      ],
+      "task_id": "dig-2",
+      "category": "digital_only",
+      "difficulty": 2
+    },
+    {
+      "index": 0,
+      "goal": "Inspect the red_object to read its display, then use the computer to log the reading you found.",
+      "task_success": false,
+      "wall_time_seconds": 183.1452451669902,
+      "replans": 0,
+      "escalations": 0,
+      "error": null,
+      "steps": [
+        {
+          "skill": "inspect",
+          "safety_decision": "allow",
+          "success": true,
+          "latency_seconds": 1.0231708750070538,
+          "message": "inspected 'red_object': found"
+        },
+        {
+          "skill": "use_computer",
+          "safety_decision": "allow",
+          "success": false,
+          "latency_seconds": 182.12198900000658,
+          "message": "action timed out"
+        }
+      ],
+      "task_id": "p2d-1",
+      "category": "physical_to_digital",
+      "difficulty": 1
+    },
+    {
+      "index": 0,
+      "goal": "Detect the objects present, then use the computer to search for a maintenance record for whichever object you found closest to the origin.",
+      "task_success": false,
+      "wall_time_seconds": 100.93802570799016,
+      "replans": 0,
+      "escalations": 0,
+      "error": null,
+      "steps": [
+        {
+          "skill": "use_computer",
+          "safety_decision": "allow",
+          "success": false,
+          "latency_seconds": 100.93799487498472,
+          "message": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 500, model: gemini-3.1-flash-lite\\nPlease retry in 22.334651507s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.1-flash-lite'}, 'quotaValue': '500'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '22s'}]}}"
+        }
+      ],
+      "task_id": "p2d-2",
+      "category": "physical_to_digital",
+      "difficulty": 2
+    },
+    {
+      "index": 0,
+      "goal": "Use the computer to look up which container the red_object belongs in, then move to the blue_container.",
+      "task_success": false,
+      "wall_time_seconds": 0.37710737498127855,
+      "replans": 0,
+      "escalations": 0,
+      "error": "ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 500, model: gemini-3.1-flash-lite\\nPlease retry in 16.083277445s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.1-flash-lite'}, 'quotaValue': '500'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '16s'}]}}",
+      "steps": [],
+      "task_id": "d2p-1",
+      "category": "digital_to_physical",
+      "difficulty": 1
+    },
+    {
+      "index": 0,
+      "goal": "Use the computer to check today's task list, then pick up the red_object and place it at the blue_container as instructed.",
+      "task_success": false,
+      "wall_time_seconds": 0.5737640839943197,
+      "replans": 0,
+      "escalations": 0,
+      "error": "ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 500, model: gemini-3.1-flash-lite\\nPlease retry in 11.033112547s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.1-flash-lite', 'location': 'global'}, 'quotaValue': '500'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '11s'}]}}",
+      "steps": [],
+      "task_id": "d2p-2",
+      "category": "digital_to_physical",
+      "difficulty": 2
+    },
+    {
+      "index": 0,
+      "goal": "Inspect the red_object, use the computer to log what you found, then move to the blue_container and stop.",
+      "task_success": false,
+      "wall_time_seconds": 0.38736445899121463,
+      "replans": 0,
+      "escalations": 0,
+      "error": "ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 500, model: gemini-3.1-flash-lite\\nPlease retry in 6.01100995s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.1-flash-lite'}, 'quotaValue': '500'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '6s'}]}}",
+      "steps": [],
+      "task_id": "multi-1",
+      "category": "multi_stage",
+      "difficulty": 2
+    },
+    {
+      "index": 0,
+      "goal": "Detect the objects present, pick up the red_object, use the computer to record that you picked it up, then place it at the blue_container.",
+      "task_success": false,
+      "wall_time_seconds": 0.3159009169903584,
+      "replans": 0,
+      "escalations": 0,
+      "error": "ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 500, model: gemini-3.1-flash-lite\\nPlease retry in 1.118519479s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.1-flash-lite', 'location': 'global'}, 'quotaValue': '500'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '1s'}]}}",
+      "steps": [],
+      "task_id": "multi-2",
+      "category": "multi_stage",
+      "difficulty": 3
+    },
+    {
+      "index": 0,
+      "goal": "Use the computer to look up today's date, then use the computer again to look up the current weather, then move to the blue_container.",
+      "task_success": false,
+      "wall_time_seconds": 0.35472066700458527,
+      "replans": 0,
+      "escalations": 0,
+      "error": "ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 500, model: gemini-3.1-flash-lite\\nPlease retry in 56.234712002s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.1-flash-lite', 'location': 'global'}, 'quotaValue': '500'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '56s'}]}}",
+      "steps": [],
+      "task_id": "multidel-1",
+      "category": "multi_delegation",
+      "difficulty": 2
+    },
+    {
+      "index": 0,
+      "goal": "Inspect the red_object, use the computer to look up its specification, use the computer again to log your inspection result, then move to the blue_container and stop.",
+      "task_success": false,
+      "wall_time_seconds": 0.376353083003778,
+      "replans": 0,
+      "escalations": 0,
+      "error": "ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 500, model: gemini-3.1-flash-lite\\nPlease retry in 51.356885877s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.1-flash-lite'}, 'quotaValue': '500'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '51s'}]}}",
+      "steps": [],
+      "task_id": "multidel-2",
+      "category": "multi_delegation",
+      "difficulty": 3
+    }
+  ]
+}

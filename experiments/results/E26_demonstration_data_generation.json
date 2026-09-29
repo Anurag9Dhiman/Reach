@@ -1,0 +1,313 @@
+{
+  "experiment_id": "E26",
+  "title": "Demonstration Data Generation",
+  "generated_at": "2026-09-28T15:06:31.977783+00:00",
+  "config": {
+    "acs": "real (analyzes CollectiveOS/data/{nav_runs,demonstrations}/ from this session's real runs)",
+    "source_experiments": "E1, E2 (and E29, if run before this)"
+  },
+  "metrics": {
+    "total_attempts_recorded": 44,
+    "attempts_by_status": {
+      "error": 30,
+      "done": 6,
+      "max_iter": 8
+    },
+    "demo_eligible_attempts": 14,
+    "demonstration_files_saved": 14,
+    "demo_capture_rate_of_eligible": 1.0,
+    "demo_capture_rate_of_all_attempts": 0.3181818181818182,
+    "trajectory_length_distribution": [
+      0,
+      20,
+      1,
+      18,
+      20,
+      4,
+      20,
+      20,
+      5,
+      20,
+      1,
+      20,
+      0,
+      20
+    ],
+    "action_type_diversity": {
+      "spotlight": 115,
+      "key_press": 21,
+      "type_text": 15,
+      "click": 17,
+      "show_desktop": 1
+    },
+    "distinct_tasks_covered": 11,
+    "successful_vs_unsuccessful_demos": "not distinguishable from saved demo files alone - the demo JSON doesn't store the run's final status, only task/steps/demos (see notes)"
+  },
+  "notes": "Of 44 real delegation attempts recorded today, only 14 reached a demo-eligible terminal state (done or max_iter) - the rest failed via an API-level exception (mostly Gemini free-tier 503/429, see E1's own findings) and were discarded by NavAgent._save_demos()'s early-return-on-exception path before any partial progress could be saved, even when steps had already accumulated. This IS the answer to 'can Reach generate useful demonstrations during normal delegation' under today's conditions: 14 demonstration file(s) resulted from 44 attempts. If this number is 0, E27/E28 (which need real demonstration data) are correspondingly blocked - see their own reports for how that was handled, not silently glossed over.",
+  "trials": [
+    {
+      "run_id": "8d9bd3e2",
+      "task": "Look up which container the red_object belongs in.",
+      "status": "error",
+      "step_count": 6
+    },
+    {
+      "run_id": "b670045b",
+      "task": "log the reading from the red_object",
+      "status": "error",
+      "step_count": 2
+    },
+    {
+      "run_id": "b7b64b3a",
+      "task": "What is today's date?",
+      "status": "done",
+      "step_count": 5
+    },
+    {
+      "run_id": "eee34848",
+      "task": "Log the reading \"42\" from the red_object.",
+      "status": "max_iter",
+      "step_count": 18
+    },
+    {
+      "run_id": "bdc565ab",
+      "task": "look up which container the red_object belongs in",
+      "status": "max_iter",
+      "step_count": 20
+    },
+    {
+      "run_id": "116a56a3",
+      "task": "Log that the red_object was inspected and found.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "e19e2930",
+      "task": "Log the reading '12345' from the red_object.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "9627ed7b",
+      "task": "today's date",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "6cb33056",
+      "task": "Log the reading 'X-982' from the red_object.",
+      "status": "max_iter",
+      "step_count": 20
+    },
+    {
+      "run_id": "14720f91",
+      "task": "log that the red_object was inspected and found.",
+      "status": "max_iter",
+      "step_count": 20
+    },
+    {
+      "run_id": "5d827efd",
+      "task": "Find the specification of part number PN-4471.",
+      "status": "max_iter",
+      "step_count": 20
+    },
+    {
+      "run_id": "44e93ff4",
+      "task": "Log the reading \"12345\" from the red_object.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "44367d0a",
+      "task": "Find the maintenance record for the blue_container, which is the object closest ",
+      "status": "error",
+      "step_count": 2
+    },
+    {
+      "run_id": "8fbb5af2",
+      "task": "What is today's date?",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "13448e6e",
+      "task": "Log that red_object was inspected.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "8c01eb07",
+      "task": "Record the measurement of 15.5cm for red_object in the lab log.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "1fe85067",
+      "task": "look up today's date",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "cd82d954",
+      "task": "Look up which container the red_object belongs in.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "a1fc302d",
+      "task": "Log the reading 42 from the red_object.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "4fa73024",
+      "task": "Log that the red_object was inspected and found.",
+      "status": "error",
+      "step_count": 17
+    },
+    {
+      "run_id": "fe1675c8",
+      "task": "Log the reading 42.8 from the red_object.",
+      "status": "max_iter",
+      "step_count": 20
+    },
+    {
+      "run_id": "901d4230",
+      "task": "look up today's date",
+      "status": "done",
+      "step_count": 1
+    },
+    {
+      "run_id": "91cb5600",
+      "task": "Look up which container the red_object belongs in.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "4bd91232",
+      "task": "Search for specification of part number PN-4471",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "15fa4082",
+      "task": "Log the reading 12345 from the red_object.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "af771306",
+      "task": "What is today's date?",
+      "status": "done",
+      "step_count": 4
+    },
+    {
+      "run_id": "14bcf385",
+      "task": "Log the reading '42.8' from the red_object.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "cf9e86c0",
+      "task": "What is the current weather?",
+      "status": "max_iter",
+      "step_count": 20
+    },
+    {
+      "run_id": "f5b2ed43",
+      "task": "log that I inspected the red_object",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "d3b49c1e",
+      "task": "What is today's date?",
+      "status": "done",
+      "step_count": 0
+    },
+    {
+      "run_id": "d33d7964",
+      "task": "What is today's date?",
+      "status": "done",
+      "step_count": 1
+    },
+    {
+      "run_id": "d7764620",
+      "task": "log the reading '42' from the red_object",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "2bcf3aeb",
+      "task": "What is today's date?",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "a670ec66",
+      "task": "Which container does the red_object belong in?",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "9037b772",
+      "task": "Log that the red_object was inspected and found.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "f488fbdb",
+      "task": "Look up which container the red_object belongs in.",
+      "status": "max_iter",
+      "step_count": 20
+    },
+    {
+      "run_id": "92b72846",
+      "task": "Log that red_object was inspected.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "aa7dcc8b",
+      "task": "Log that the red_object was found.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "4b688919",
+      "task": "Look up which container the red_object belongs in.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "8f257014",
+      "task": "Log the reading '1234' from the red_object.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "3a457067",
+      "task": "look up today's date",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "7cc2e7eb",
+      "task": "Look up today's date.",
+      "status": "error",
+      "step_count": 0
+    },
+    {
+      "run_id": "055381a5",
+      "task": "look up the current weather",
+      "status": "done",
+      "step_count": 0
+    },
+    {
+      "run_id": "f1298b55",
+      "task": "What is today's date?",
+      "status": "error",
+      "step_count": 0
+    }
+  ]
+}
