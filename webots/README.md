@@ -5,12 +5,15 @@ instead of `MockRobot`, so `move` and the Safety Kernel's collision-margin
 denial can be watched live. See [Pulse#10](https://github.com/Anurag9Dhiman/Pulse/pull/10)
 for the `WebotsRobot`/`WebotsBridge` adapter this connects to.
 
-**Webots itself is now installed and launches** (R2025a, verified 2026-09-30 —
-see Setup step 1 for exactly how). `par_arena.wbt` has not yet been opened in
-it and `par_bridge.py` has not yet been run against a real session — see
-"Known unknowns" below for what's still unverified. The Python control logic
-(differential-drive convergence, object lookup, the WebSocket protocol) is
-verified against a fake Webots API that simulates real robot kinematics.
+**Verified end to end against a real Webots R2025a install on 2026-09-30**:
+`par_arena.wbt` loads (after adding the `EXTERNPROTO` declarations below —
+R2025a no longer resolves those node types implicitly), `par_bridge.py`
+connects to the running e-puck, and a real `dock_at_computer` action drove
+the physical simulation from `(0, 0)` to `(1.15, -0.97)` — matching the
+computed dock point ~0.15m from the `laptop` prop at `(1.3, -1.1)` — with
+`undock_from_computer` confirmed working immediately after. See "Known
+unknowns" below for the couple of things still untested (mainly cosmetic
+texture downloads, which fail over this network but don't affect physics).
 
 ## Setup
 
@@ -114,37 +117,35 @@ first (`cd CollectiveOS && uvicorn src.api:app --port 8000`) with
 `COLLECTIVEOS_WS_URL`/`COLLECTIVEOS_API_TOKEN` set to match, per
 `experiments/README.md`.
 
-## Known unknowns (flag these back if the first run fails here)
+## Verified against a real install (2026-09-30)
 
-Written mostly without a Webots install available (the app itself was
-verified 2026-09-30 — see Setup — but `par_arena.wbt` has not yet been
-opened in it), so these are still best-effort and each is an easy fix once
-Webots' own error message points at it:
+Everything that was previously an open "known unknown" here has now actually
+been run and confirmed against Webots R2025a on macOS/arm64:
 
-- **E-puck PROTO field names** (`controller`, `supervisor`) and the world's
-  general node structure (`RectangleArena`, `TexturedBackground`,
-  `PBRAppearance`) — standard Webots node/PROTO names, not verified against
-  this specific installed version.
-- **Motor device names** `"left wheel motor"` / `"right wheel motor"` — the
-  standard names in Webots' bundled e-puck samples; if `getDevice()` raises,
-  check the e-puck PROTO's device list in Webots' documentation browser.
-- **LED device name** `"led0"` — also standard for the bundled e-puck PROTO
-  (`led0`-`led7`), used only as a "computer in use" indicator during dock/
-  undock. Lower stakes than the motors: `getDevice()` returning `None` for a
-  wrong name degrades to "docks silently, no visible light" rather than
-  crashing the bridge (see `_EpuckBridge.__init__` and the dock handlers).
-- **`coordinateSystem "ENU"`** (Z-up) — chosen to match PAR's existing
-  `(x, y)` = ground plane, `z` = height convention. If Webots opens the
-  world with unexpected orientation, this is the first thing to check.
-- **`Supervisor.SIMULATION_MODE_FAST`** constant name — used once at startup
-  to fast-forward the sim; if this raises `AttributeError`, check the
-  installed version's `Supervisor` API for the actual constant name and fix
-  `par_bridge.py`'s one reference to it.
+- **E-puck PROTO field names** (`controller`, `supervisor`), general node
+  structure, **motor device names** (`"left wheel motor"` /
+  `"right wheel motor"`), **LED device name** (`"led0"`),
+  **`coordinateSystem "ENU"`**, and **`Supervisor.SIMULATION_MODE_FAST`** —
+  all resolved without needing a single code change; the real
+  differential-drive control loop converged and drove the robot to the
+  correct real-world coordinates.
+- The one thing that *did* need a fix: R2025a requires explicit
+  `EXTERNPROTO` declarations for `TexturedBackground`,
+  `TexturedBackgroundLight`, `RectangleArena`, `Parquetry`, and `E-puck` —
+  see the top of `par_arena.wbt`. Whatever Webots version this file was
+  originally authored against must have resolved these implicitly; R2025a
+  does not, and says so clearly in its own error output (which is also
+  where the exact `EXTERNPROTO` URLs came from).
 
-None of these affect `Pulse/tests/test_webots_bridge.py` (which tests the
-Pulse-side adapter against a fake bridge, not real Webots) or the two
-scratch verifications run while writing this (differential-drive control
-loop convergence against simulated kinematics; the WebSocket
-request/response threading end to end against the real `websockets`
-library) — both passed before this was written up, using a fake
-`controller` module in place of Webots itself.
+**Known limitation, not a bug**: cosmetic texture downloads (floor wood
+grain, e-puck plastic/copper materials, the gctronic logo decal) fail with
+"Connection closed" in this environment — likely an outbound-HTTPS
+restriction on `raw.githubusercontent.com` for large binary assets
+specifically, since the `EXTERNPROTO` *declarations* themselves (also
+fetched from the same host) succeeded. The simulation renders with flat
+colors instead of full textures; physics, motors, the LED, and the
+WebSocket bridge are all unaffected.
+
+This also confirmed `Pulse/tests/test_webots_bridge.py`'s fake-bridge tests
+were accurately modeling the real thing: no gap was found between what the
+fake predicted and what the real controller did.
