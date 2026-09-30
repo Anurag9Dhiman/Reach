@@ -157,6 +157,14 @@ ENV/
 env.bak/
 venv.bak/
 
+# scripts/run_simulation.sh's runtime state (pid files, logs)
+.sim_state/
+
+# Webots-generated per-user project state (viewpoint/UI layout, thumbnail) -
+# not part of the world definition itself
+webots/worlds/.*.wbproj
+webots/worlds/.*.jpg
+
 # Spyder project settings
 .spyderproject
 .spyproject
