@@ -166,6 +166,7 @@ class _ComputerArmBridge:
     def observation_payload(self) -> dict[str, Any]:
         return {
             "screen_state": self.kiosk.state,
+            "screen_text": self.kiosk.screen_text(),
             "gantry_position": {"x": self.x_sensor.getValue(), "z": self.z_sensor.getValue()},
         }
 
