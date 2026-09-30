@@ -5,18 +5,39 @@ instead of `MockRobot`, so `move` and the Safety Kernel's collision-margin
 denial can be watched live. See [Pulse#10](https://github.com/Anurag9Dhiman/Pulse/pull/10)
 for the `WebotsRobot`/`WebotsBridge` adapter this connects to.
 
-**Not yet run against a real Webots install** while this was written — see
-"Known unknowns" below. The Python control logic (differential-drive
-convergence, object lookup, the WebSocket protocol) is verified against a
-fake Webots API that simulates real robot kinematics; the actual Webots
-device/API names it calls are not.
+**Webots itself is now installed and launches** (R2025a, verified 2026-09-30 —
+see Setup step 1 for exactly how). `par_arena.wbt` has not yet been opened in
+it and `par_bridge.py` has not yet been run against a real session — see
+"Known unknowns" below for what's still unverified. The Python control logic
+(differential-drive convergence, object lookup, the WebSocket protocol) is
+verified against a fake Webots API that simulates real robot kinematics.
 
 ## Setup
 
-1. Install Webots (manual download from [cyberbotics.com](https://cyberbotics.com/) —
-   Homebrew's `webots` cask is currently disabled: it fails Gatekeeper as of
-   2026-09-01). Approve it past Gatekeeper once on first launch (System
-   Settings → Privacy & Security → Open Anyway, or `xattr -cr /Applications/Webots.app`).
+1. Install Webots. Homebrew's `webots` cask is disabled (fails Gatekeeper as
+   of 2026-09-01), so install directly from the project's GitHub releases
+   instead of the cask or the marketing site's download page:
+
+   ```bash
+   curl -L -o webots.dmg https://github.com/cyberbotics/webots/releases/download/R2025a/webots-R2025a.dmg
+   MOUNT=$(hdiutil attach webots.dmg -nobrowse -plist | plutil -extract 'system-entities.0.mount-point' raw -)
+   cp -R "$MOUNT/Webots.app" /Applications/
+   hdiutil detach "$MOUNT" -quiet
+   xattr -cr /Applications/Webots.app
+   rm webots.dmg
+   ```
+
+   The last step matters: the `.dmg`'s `Webots.app` is ad-hoc signed, not
+   notarized (`codesign -dv` shows `Signature=adhoc`, `TeamIdentifier=not
+   set`), so `spctl -a -vv /Applications/Webots.app` will report `rejected`
+   regardless — that check alone looks scarier than it is. What actually
+   gates a normal launch is the `com.apple.quarantine` extended attribute
+   Gatekeeper stamps on anything downloaded via a browser or `curl`;
+   `xattr -cr` strips it, and `open /Applications/Webots.app` (or
+   double-clicking it in Finder) then launches normally without a
+   confirmation dialog — verified working this way on macOS 15.5/arm64. If
+   your Mac still blocks it, the fallback is System Settings → Privacy &
+   Security → **Open Anyway** (appears after the first blocked attempt).
 
 2. `pip install websockets` into whatever Python will run `par_bridge.py`
    (a plain venv is fine — this script does not need the rest of Pulse
@@ -26,11 +47,14 @@ device/API names it calls are not.
 
    ```bash
    export WEBOTS_HOME=/Applications/Webots.app
-   export PYTHONPATH="$WEBOTS_HOME/lib/controller/python:$PYTHONPATH"
+   export PYTHONPATH="$WEBOTS_HOME/Contents/lib/controller/python:$PYTHONPATH"
    ```
 
-   (Exact subpath may differ by Webots version — check
-   `$WEBOTS_HOME/lib/controller/python*` after installing if the import fails.)
+   (Verified 2026-09-30 against the real R2025a install: the controller
+   Python package lives under `Contents/lib/controller/python`, not directly
+   under `lib/` as originally guessed here — `Contents/` is where everything
+   in a macOS `.app` bundle actually lives. `python3 -c "from controller
+   import Supervisor"` succeeds with this path set.)
 
 ## Run
 
@@ -92,8 +116,10 @@ first (`cd CollectiveOS && uvicorn src.api:app --port 8000`) with
 
 ## Known unknowns (flag these back if the first run fails here)
 
-Written without a Webots install available, so these are best-effort and
-each is an easy fix once Webots' own error message points at it:
+Written mostly without a Webots install available (the app itself was
+verified 2026-09-30 — see Setup — but `par_arena.wbt` has not yet been
+opened in it), so these are still best-effort and each is an easy fix once
+Webots' own error message points at it:
 
 - **E-puck PROTO field names** (`controller`, `supervisor`) and the world's
   general node structure (`RectangleArena`, `TexturedBackground`,
