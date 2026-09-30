@@ -61,9 +61,19 @@ texture downloads, which fail over this network but don't affect physics).
 
 ## Run
 
-1. Open `webots/worlds/par_arena.wbt` in Webots and press Run (▶). The
-   e-puck's controller is set to `<extern>`, so Webots will *wait* rather
-   than run anything yet.
+There are two independent ways to watch `use_computer` happen physically,
+sharing the same physical tour but differing in what the digital half
+actually is. Both need the e-puck's bridge; the gantry path additionally
+needs `computer_arm_bridge.py`.
+
+**Important**: Webots holds the *entire* simulation paused at t=0 until
+*every* extern-controller robot in the world has connected - with both the
+e-puck and `computer_arm` present, nothing moves until both bridges are
+running, not just the one you're testing.
+
+1. Open `webots/worlds/par_arena.wbt` in Webots and press Run (▶). Both
+   robots' controllers are `<extern>`, so Webots will *wait* rather than run
+   anything yet.
 
 2. In another terminal (with the env vars from Setup step 3):
 
@@ -71,51 +81,91 @@ texture downloads, which fail over this network but don't affect physics).
    python3 webots/controllers/par_bridge/par_bridge.py
    ```
 
-   It should print `PAR-Webots bridge listening on ws://localhost:6001` and
-   the e-puck should stop waiting in Webots.
+   It should print `PAR-Webots bridge listening on ws://localhost:6001`.
 
-3. In a third terminal, from `Pulse/`:
+3. **For the CollectiveOS (real host screen) path**, skip to step 4. **For
+   the physically-real gantry path**, also start, in a fourth terminal:
+
+   ```bash
+   python3 webots/controllers/computer_arm_bridge/computer_arm_bridge.py
+   ```
+
+   It should print `PAR-computer_arm bridge listening on ws://localhost:6002`,
+   and only then should the e-puck stop waiting in Webots.
+
+4. In another terminal, from `Pulse/`:
 
    ```bash
    pip install -e ".[webots]"
-   python examples/webots_loop.py
+   python examples/webots_loop.py           # delegates to real CollectiveOS
+   # or:
+   python examples/simulated_arm_loop.py    # delegates to computer_arm's gantry
    ```
 
-   Watch the Webots window: the e-puck should rotate to face, then drive to,
-   a waypoint near `red_object`; then attempt a move directly onto
-   `red_object` and get denied (Safety Kernel collision-margin check —
-   check the printed output for the denial reason); then drive to a waypoint
-   near `blue_container`; then **drive to the `laptop` prop, light its LED,
-   and hold there while a real `use_computer` delegation to CollectiveOS
-   runs** (see "Physical simulation of the computer-use delegation" below);
-   then stop.
+   Watch the Webots window: the e-puck rotates to face, then drives to, a
+   waypoint near `red_object`; attempts a move directly onto `red_object`
+   and gets denied (Safety Kernel collision-margin check — check the
+   printed output for the denial reason); drives to a waypoint near
+   `blue_container`; then delegates `use_computer` (see below for what that
+   looks like in each mode); then stops.
 
-## Physical simulation of the computer-use delegation
+## Two ways `use_computer` becomes physical
 
-The `laptop` Solid in `par_arena.wbt` is a stand-in for "the computer" PAR
-delegates to via `use_computer`. The e-puck has no arm, so it cannot
-literally type on it — what's simulated is **symbolic docking**, not
-manipulation: when `ComputerAugmentedRobot` (wrapping `WebotsRobot`) executes
-a `use_computer` action, `par_bridge.py`'s `_do_dock_at_computer` drives the
-robot to a point ~0.15m from the laptop and lights LED `led0` for the
-delegation's duration; `_do_undock_from_computer` turns it off once
-CollectiveOS replies (success or failure). This is the whole point of adding
-it: without it, the digital half of a mixed physical+digital task is
-invisible in the simulation — just a WebSocket call happening off to the
-side while the robot body does nothing. With it, "the robot delegates to the
-computer" is something you can watch the robot body do (approach, wait,
-leave), even though the actual screen-operation happens on the host
-machine's real desktop via CollectiveOS's Navigation Agent, not inside
-Webots' physics.
-
-This dock/undock step runs regardless of whether CollectiveOS is actually
-reachable — `examples/webots_loop.py` will still drive to the laptop and
-light the LED even with no CollectiveOS instance running; only the delegated
-task's own success/failure depends on that. If you want to see a *real*
-delegation complete (not just the physical approach), start CollectiveOS
-first (`cd CollectiveOS && uvicorn src.api:app --port 8000`) with
-`COLLECTIVEOS_WS_URL`/`COLLECTIVEOS_API_TOKEN` set to match, per
+**`examples/webots_loop.py` (default, `CollectiveOSBridge`)** — the digital
+half runs on the real host screen. The e-puck can't type, so what's
+simulated is **symbolic docking**: `ComputerAugmentedRobot` calls
+`WebotsRobot.begin_computer_use()`, which sends `dock_at_computer` to
+`par_bridge.py` — it drives to a point ~0.30m from `computer_arm` and
+lights LED `led0` for the delegation's duration; `end_computer_use()` turns
+it off once CollectiveOS replies (success or failure). This runs regardless
+of whether CollectiveOS is reachable — the e-puck still docks and undocks
+even with no CollectiveOS instance running; only the delegated task's own
+success/failure depends on that. For a *real* delegation to complete, start
+CollectiveOS first (`cd CollectiveOS && uvicorn src.api:app --port 8000`)
+with `COLLECTIVEOS_WS_URL`/`COLLECTIVEOS_API_TOKEN` set to match, per
 `experiments/README.md`.
+
+**`examples/simulated_arm_loop.py` (`PAR_COMPUTER_USE_MODE=simulated_arm`,
+`SimulatedArmBridge`)** — physically real, not symbolic, and doesn't touch
+the real host screen at all. The e-puck still docks the same way (the hooks
+are unchanged), but the actual `use_computer` execution routes to
+`computer_arm`'s own 2-axis (X+Z) gantry: `SimulatedArmBridge` maps the
+task's text to one of three buttons (`check`/`confirm`/`clear` — keyword
+matching against a small fixed vocabulary, not real vision/AI reasoning;
+see that file's docstring for the intentional v1 scope), sends
+`press_button` to `computer_arm_bridge.py`, which drives the gantry there,
+confirms contact with a real `TouchSensor` on the plunger tip, and updates
+a small scripted "kiosk" app drawn on `computer_arm`'s `Display`. Verified
+end to end 2026-09-30: a real `use_computer("check whether any maintenance
+alerts are open")` call produced `"pressed 'check'; kiosk now shows: 1
+ALERT: LOW BATTERY"` — a real button, really pressed, really changing a
+real (if small) simulated computer's displayed state.
+
+**Building this uncovered two real, non-obvious mechanics of the gantry
+itself**, both found via live Webots runs, not from documentation:
+- The originally-calculated press depth (theoretical first contact + a
+  9mm overshoot) was **not** reliably enough — the `LinearMotor` has real
+  steady-state error under its own weight/friction, so the actual depth
+  reached at a commanded position falls short of the command. Only driving
+  the joint to its exact `maxStop` reliably produced contact; verified via
+  direct `Supervisor.getPosition()` queries that the *geometry* itself was
+  correct (sub-5mm clearance) before concluding this was a servo-compliance
+  effect, not a calculation error.
+- Breaking out of the press-and-poll loop the instant the position sensor
+  reports "arrived" can exit before contact force fully develops over a few
+  more settling steps — fixed by running a fixed, generous step budget
+  instead of exiting on early convergence. See `computer_arm_bridge.py`'s
+  `_press_and_watch` docstring.
+
+**Reused port gotcha, worth knowing before debugging something else**: a
+Webots instance's connection-slot state for `<extern>` controllers can
+accumulate across many relaunches on the *same* port within one working
+session — manifesting as silent connection failures or a phantom
+"ambiguous extern controller" name list containing robots from previous,
+already-closed sessions. If a controller that was working moments ago
+suddenly can't connect (or the "Available robots" list mentions a name you
+don't recognize), relaunch Webots with a different `--port` rather than
+debugging the controller code.
 
 ## Verified against a real install (2026-09-30)
 
