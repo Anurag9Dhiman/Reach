@@ -50,6 +50,12 @@ _PORT = 6001
 
 _OBJECT_NAMES = ("red_object", "blue_container")
 
+_LAPTOP_NAME = "laptop"
+# How far from the laptop's center the robot should stop when "docking" -
+# the e-puck has no arm, so this is a symbolic stand-in for "at the
+# computer", not a real reach/grasp distance.
+_DOCK_APPROACH_OFFSET_M = 0.15
+
 # e-puck's real max wheel speed is slow (~0.13 m/s); fast-forwarding the
 # simulation keeps a `move` maneuver from eating PAR's action timeout budget
 # in wall-clock time without changing anything about the physics itself.
@@ -99,6 +105,13 @@ class _EpuckBridge:
 
         self.self_node = self.robot.getSelf()
         self._holding: str | None = None
+
+        # Standard e-puck PROTO device name; None if this build's e-puck
+        # doesn't expose it (getDevice() returns None rather than raising) -
+        # the LED is a nice-to-have status indicator, not load-bearing, so
+        # dock/undock degrade to "drive there, no visible light" rather than
+        # crashing the bridge if the name is off. See README's known-unknowns.
+        self.led0 = self.robot.getDevice("led0")
 
         if _RUN_IN_FAST_MODE:
             self.robot.simulationSetMode(Supervisor.SIMULATION_MODE_FAST)
@@ -205,6 +218,41 @@ class _EpuckBridge:
         held, self._holding = self._holding, None
         target = parameters.get("target")
         return True, f"placed '{held}' at '{target}' (state only - e-puck has no gripper)"
+
+    def _do_dock_at_computer(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        # Called by WebotsRobot.begin_computer_use() right before PAR
+        # delegates to CollectiveOS - drives to a point near the "laptop"
+        # prop and lights an LED for the duration, so the digital hand-off is
+        # visible as the robot arriving at and waiting near a computer.
+        laptop_position = self._object_position(_LAPTOP_NAME)
+        if laptop_position is None:
+            return False, f"'{_LAPTOP_NAME}' prop not found in world; skipping physical dock"
+
+        lx, ly, _ = laptop_position
+        x, y, _ = self._position()
+        dx, dy = lx - x, ly - y
+        distance = math.hypot(dx, dy)
+        if distance <= _DOCK_APPROACH_OFFSET_M:
+            approach_x, approach_y = x, y  # already close enough
+        else:
+            ratio = (distance - _DOCK_APPROACH_OFFSET_M) / distance
+            approach_x, approach_y = x + dx * ratio, y + dy * ratio
+
+        success, move_message = self._do_move({"x": approach_x, "y": approach_y})
+        if success and self.led0 is not None:
+            self.led0.set(1)
+        if not success:
+            return False, f"could not reach '{_LAPTOP_NAME}': {move_message}"
+        return True, f"docked near '{_LAPTOP_NAME}': {move_message}"
+
+    def _do_undock_from_computer(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        # Called by WebotsRobot.end_computer_use() right after the
+        # delegation finishes (success or failure) - always succeeds and
+        # always turns the LED off, since "stop indicating computer-in-use"
+        # should never itself fail the task.
+        if self.led0 is not None:
+            self.led0.set(0)
+        return True, "undocked from computer"
 
 
 def _wrap_angle(angle: float) -> float:
