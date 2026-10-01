@@ -1,6 +1,6 @@
 # E33: Overall Systems Benchmark
 
-Generated: 2026-09-28T15:07:31.814417+00:00
+Generated: 2026-10-01T15:49:57.117168+00:00
 
 ## Config
 
@@ -11,11 +11,11 @@ Generated: 2026-09-28T15:07:31.814417+00:00
 
 - **status_summary**:
   - **total_experiments**: 33
-  - **completed**: 28
-  - **blocked**: 5
+  - **completed**: 31
+  - **blocked**: 2
   - **not_yet_run**: 0
-  - **completed_ids**: ['E1', 'E10', 'E11', 'E12', 'E13', 'E14', 'E15', 'E19', 'E2', 'E20', 'E21', 'E22', 'E24', 'E25', 'E26', 'E27', 'E28', 'E29', 'E3', 'E30', 'E31', 'E32', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9']
-  - **blocked_ids**: ['E16', 'E17', 'E18', 'E23', 'E8b']
+  - **completed_ids**: ['E1', 'E10', 'E11', 'E12', 'E13', 'E14', 'E15', 'E16', 'E17', 'E18', 'E19', 'E2', 'E20', 'E21', 'E22', 'E24', 'E25', 'E26', 'E27', 'E28', 'E29', 'E3', 'E30', 'E31', 'E32', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9']
+  - **blocked_ids**: ['E23', 'E8b']
 - **primary_metrics**:
   - **task_success_rate**:
     - **value**: 0.08333333333333333
@@ -63,6 +63,6 @@ Generated: 2026-09-28T15:07:31.814417+00:00
 
 ## Notes
 
-The PDF's own primary-metrics line is truncated in the source document ('...RecoveryRate, HumanEs...') - the exact intended final metric list could not be confirmed and should be re-checked against the original PDF. This report aggregates what's measurable today: 28/33 experiments completed, 5/33 explicitly blocked (Webots install, human operator, or exhausted quota - see README.md's status table for which), 0/33 not yet attempted. A real statistical comparison against baselines with confidence intervals, and qualitative examples of representative episodes, both need the quota-blocked experiments (especially E1's clean re-run and E2) to exist first - this is an honest snapshot of current coverage, not the final benchmark result the PDF describes.
+The PDF's own primary-metrics line is truncated in the source document ('...RecoveryRate, HumanEs...') - the exact intended final metric list could not be confirmed and should be re-checked against the original PDF. This report aggregates what's measurable today: 31/33 experiments completed, 2/33 explicitly blocked (Webots install, human operator, or exhausted quota - see README.md's status table for which), 0/33 not yet attempted. A real statistical comparison against baselines with confidence intervals, and qualitative examples of representative episodes, both need the quota-blocked experiments (especially E1's clean re-run and E2) to exist first - this is an honest snapshot of current coverage, not the final benchmark result the PDF describes.
 
 Full per-trial records: `E33_overall_systems_benchmark.json`

@@ -1,11 +1,43 @@
 {
   "experiment_id": "E18",
   "title": "Physical-Digital Task Execution in Simulation",
-  "generated_at": "2026-09-26T23:21:23.190885+00:00",
-  "config": {},
-  "metrics": {
-    "status": "blocked"
+  "generated_at": "2026-10-01T15:49:45.069286+00:00",
+  "config": {
+    "evaluation_method": "one real Runtime.run_task() through ComputerAugmentedRobot(WebotsRobot()) with the DEFAULT CollectiveOSBridge, against a live Webots process AND a live CollectiveOS instance simultaneously",
+    "profile": "simulation",
+    "delegated_task": "check whether any maintenance alerts are open",
+    "attempts": 3
   },
-  "notes": "**Blocked**: no Webots installation in this environment\n\n**Unblock when**: Webots installed and Gatekeeper-approved, run alongside a live CollectiveOS instance with available Gemini quota; ComputerAugmentedRobot(WebotsRobot()) composes the two existing wrappers directly (both already exist independently, just never run together)",
-  "trials": []
+  "metrics": {
+    "task_reached_complete": false,
+    "near_red_allowed_and_succeeded": true,
+    "collision_correctly_denied": true,
+    "near_blue_allowed_and_succeeded": true,
+    "real_acs_delegation_succeeded": false,
+    "stop_succeeded": null,
+    "all_checks_passed": false,
+    "physical_subsystem_checks_passed_all_3_attempts": true,
+    "acs_delegation_failed_all_3_attempts_due_to_external_outage": true
+  },
+  "notes": "Unblocked 2026-10-01 (previously blocked: needed real Webots AND real CollectiveOS/Gemini quota simultaneously - now both available). Attempted 3 times for real against a live Webots process and a live CollectiveOS instance. In all 3 attempts, the PHYSICAL half of the composed loop worked correctly and identically: real waypoint navigation to a point near red_object (allowed), a live safety-kernel collision denial against the real detected object position when the e-puck tried to drive onto it, and real waypoint navigation to a point near blue_container (allowed) - exactly reproducing E16/E17's findings in a composed task rather than in isolation. The DIGITAL half - delegating 'check whether any maintenance alerts are open' to the real ACS - failed all 3 times with an identical Gemini 503 'currently experiencing high demand' error, across BOTH of the project's two quota pools (gemini-3.1-flash-lite, twice, ~60s before failing each time; gemini-3.6-flash, the CollectiveOS-default model, once, ~7.5s before failing) - this is a genuine, sustained, external Gemini capacity outage at the time of running, not a Reach-side bug, and independently reconfirms E29's same-day finding of a sustained gemini-3.1-flash-lite outage from a completely different angle (a composed physical+digital task here, vs. cross-domain generalization trials there). Per Runtime.run_task's own documented contract (a genuine execution failure, unlike a safety denial, correctly ends the loop early - see runtime.py's docstring), the scripted 'stop'/task_complete steps were correctly never reached once the real delegation failed; this is Runtime behaving exactly as designed under a real external failure, not a flaw in the composition being tested. The bridge's error handling worked as the paper itself describes for exactly this situation: the 503 surfaced as an ordinary failed ActionResult with a readable message, not a crash, in all 3 attempts. Stopped retrying after 3 real attempts (one of which spent part of CollectiveOS's scarce 20-requests-per-day gemini-3.6-flash quota) rather than continuing to hammer an external service known at this point to be degraded - this experiment should be re-attempted when Gemini's availability has recovered to obtain a fully successful composed run; the live-delegation success this paper already reports (Section 5) demonstrates the same digital half succeeding under normal API availability.",
+  "trials": [
+    {
+      "attempt": 1,
+      "vision_model": "gemini-3.1-flash-lite (override)",
+      "latency_seconds": 59.42,
+      "outcome": "503 UNAVAILABLE - high demand"
+    },
+    {
+      "attempt": 2,
+      "vision_model": "gemini-3.1-flash-lite (override)",
+      "latency_seconds": 63.89,
+      "outcome": "503 UNAVAILABLE - high demand"
+    },
+    {
+      "attempt": 3,
+      "vision_model": "gemini-3.6-flash (CollectiveOS default)",
+      "latency_seconds": 7.51,
+      "outcome": "503 UNAVAILABLE - high demand"
+    }
+  ]
 }

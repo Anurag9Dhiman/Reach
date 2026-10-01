@@ -50,11 +50,14 @@ _PORT = 6001
 
 _OBJECT_NAMES = ("red_object", "blue_container")
 
-_LAPTOP_NAME = "laptop"
-# How far from the laptop's center the robot should stop when "docking" -
-# the e-puck has no arm, so this is a symbolic stand-in for "at the
-# computer", not a real reach/grasp distance.
-_DOCK_APPROACH_OFFSET_M = 0.15
+_COMPUTER_ARM_NAME = "computer_arm"
+# How far from the computer_arm's center the e-puck should stop when
+# docking. computer_arm's riser base is 0.28 x 0.12 (half-diagonal ~0.15m) -
+# this must clear that footprint with real margin, or the e-puck's computed
+# approach point can end up inside the gantry's collision geometry. Not a
+# reach/grasp distance - the e-puck has no arm; computer_arm's own gantry is
+# what actually presses the buttons (see computer_arm_bridge.py).
+_DOCK_APPROACH_OFFSET_M = 0.30
 
 # e-puck's real max wheel speed is slow (~0.13 m/s); fast-forwarding the
 # simulation keeps a `move` maneuver from eating PAR's action timeout budget
@@ -221,16 +224,17 @@ class _EpuckBridge:
 
     def _do_dock_at_computer(self, parameters: dict[str, Any]) -> tuple[bool, str]:
         # Called by WebotsRobot.begin_computer_use() right before PAR
-        # delegates to CollectiveOS - drives to a point near the "laptop"
-        # prop and lights an LED for the duration, so the digital hand-off is
-        # visible as the robot arriving at and waiting near a computer.
-        laptop_position = self._object_position(_LAPTOP_NAME)
-        if laptop_position is None:
-            return False, f"'{_LAPTOP_NAME}' prop not found in world; skipping physical dock"
+        # delegates - drives to a point near computer_arm and lights an LED
+        # for the duration, so the digital hand-off is visible as the robot
+        # arriving at and waiting near the computer that will actually
+        # perform it.
+        computer_position = self._object_position(_COMPUTER_ARM_NAME)
+        if computer_position is None:
+            return False, f"'{_COMPUTER_ARM_NAME}' not found in world; skipping physical dock"
 
-        lx, ly, _ = laptop_position
+        cx, cy, _ = computer_position
         x, y, _ = self._position()
-        dx, dy = lx - x, ly - y
+        dx, dy = cx - x, cy - y
         distance = math.hypot(dx, dy)
         if distance <= _DOCK_APPROACH_OFFSET_M:
             approach_x, approach_y = x, y  # already close enough
@@ -242,8 +246,8 @@ class _EpuckBridge:
         if success and self.led0 is not None:
             self.led0.set(1)
         if not success:
-            return False, f"could not reach '{_LAPTOP_NAME}': {move_message}"
-        return True, f"docked near '{_LAPTOP_NAME}': {move_message}"
+            return False, f"could not reach '{_COMPUTER_ARM_NAME}': {move_message}"
+        return True, f"docked near '{_COMPUTER_ARM_NAME}': {move_message}"
 
     def _do_undock_from_computer(self, parameters: dict[str, Any]) -> tuple[bool, str]:
         # Called by WebotsRobot.end_computer_use() right after the

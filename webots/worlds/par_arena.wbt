@@ -13,6 +13,14 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/Parquetry.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/gctronic/e-puck/protos/E-puck.proto"
+# Real, recognizable props instead of plain colored boxes - swapped in for
+# "better clarity" per the user's request, same `name`/position convention
+# so par_bridge.py's by-name object lookup (_OBJECT_NAMES) and the
+# collision-margin denial demo in examples/webots_loop.py (position-based,
+# not size-based) are unaffected by the visual swap.
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/fire_extinguisher/protos/FireExtinguisher.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/PlasticCrate.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/computers/protos/Laptop.proto"
 
 WorldInfo {
   basicTimeStep 32
@@ -42,77 +50,252 @@ E-puck {
   supervisor TRUE
 }
 
-Solid {
-  translation 0.5 0.2 0.05
+FireExtinguisher {
+  translation 0.5 0.2 0
   name "red_object"
-  children [
-    Shape {
-      appearance PBRAppearance {
-        baseColor 0.8 0.05 0.05
-        roughness 0.6
-        metalness 0
-      }
-      geometry Box {
-        size 0.1 0.1 0.1
-      }
-    }
-  ]
 }
 
-Solid {
-  translation -0.3 0.4 0.05
+PlasticCrate {
+  translation -0.3 0.4 0
   name "blue_container"
-  children [
-    Shape {
-      appearance PBRAppearance {
-        baseColor 0.05 0.15 0.8
-        roughness 0.6
-        metalness 0
-      }
-      geometry Box {
-        size 0.15 0.15 0.1
-      }
-    }
-  ]
 }
 
-# The physical stand-in for "the computer" the robot delegates to via
-# use_computer. The e-puck has no arm, so it cannot literally type on this -
-# see webots/README.md's "symbolic docking" note: par_bridge.py drives the
-# robot to a point near this prop and lights an LED for the delegation's
-# duration, so the digital hand-off to CollectiveOS reads as something the
-# robot is doing (approaching, waiting at, leaving the laptop), not an
-# invisible network call. Looked up by `name`, same as red_object/
-# blue_container - see _EpuckBridge._object_position.
-Solid {
-  translation 1.3 -1.1 0.0
-  name "laptop"
+# The robot the e-puck delegates use_computer to. Physically real, not
+# symbolic: a fixed 2-axis (X + Z) gantry presses one of three buttons on a
+# small kiosk panel, confirmed by a TouchSensor on the plunger tip - see
+# webots/README.md's "physically real computer interaction" section and
+# computer_arm_bridge.py, which drives this robot. par_bridge.py's
+# dock_at_computer still looks this object up by `name` (now "computer_arm",
+# not "laptop") to position the e-puck in front of it - see
+# _EpuckBridge._object_position.
+#
+# Layout (local to this Robot's own origin): a 0.28x0.12x0.10 riser sits on
+# the floor, top surface at local z=0.10. Three buttons sit on top of the
+# riser, top surface at local z=0.12, at local x = -0.08 / 0 / +0.08. The
+# gantry's X+Z carriage is mounted at local z=0.30, well clear of the
+# buttons and the riser, and descends onto whichever button is selected by
+# its X position. No `physics` on this top-level Robot node - it must stay
+# fixed at its authored position for the whole simulation, not just
+# initially; only the moving carriage/plunger sub-solids (which a SliderJoint
+# actually needs physics on to be actuated by its motor) have `physics`.
+Robot {
+  translation 1.3 -1.1 0
+  name "computer_arm"
+  controller "<extern>"
   children [
-    Shape {
-      appearance PBRAppearance {
-        baseColor 0.18 0.18 0.19
-        roughness 0.4
-        metalness 0.2
-      }
-      geometry Box {
-        size 0.3 0.2 0.02
-      }
-    }
-    Transform {
-      translation 0 -0.095 0.11
-      rotation 1 0 0 -1.85
+    Pose {
+      translation 0 0 0.05
       children [
         Shape {
           appearance PBRAppearance {
-            baseColor 0.1 0.1 0.11
-            roughness 0.3
-            metalness 0.3
+            baseColor 0.18 0.18 0.19
+            roughness 0.4
+            metalness 0.2
           }
-          geometry Box {
-            size 0.3 0.19 0.015
+          geometry DEF RISER Box {
+            size 0.28 0.12 0.1
           }
         }
       ]
     }
+    Solid {
+      translation -0.08 0 0.11
+      name "button_check"
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.15 0.55 0.2
+            roughness 0.5
+          }
+          geometry DEF BUTTON Box {
+            size 0.04 0.04 0.02
+          }
+        }
+      ]
+      boundingObject USE BUTTON
+    }
+    DEF BUTTON_CONFIRM Solid {
+      translation 0 0 0.11
+      name "button_confirm"
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.2 0.35 0.7
+            roughness 0.5
+          }
+          geometry USE BUTTON
+        }
+      ]
+      boundingObject USE BUTTON
+    }
+    Solid {
+      translation 0.08 0 0.11
+      name "button_clear"
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.7 0.25 0.2
+            roughness 0.5
+          }
+          geometry USE BUTTON
+        }
+      ]
+      boundingObject USE BUTTON
+    }
+    Display {
+      translation -0.14 0 0.08
+      rotation 0 0 1 1.5708
+      name "kiosk_screen"
+      width 128
+      height 64
+    }
+    # Lets a vision-guided bridge (par.integrations.vision_guided_arm) see
+    # the button panel the same way a human (or CollectiveOS's real
+    # NavAgent) would glance at a screen before acting, instead of deciding
+    # blind from the task text alone.
+    #
+    # Position/rotation verified empirically against the real saved image
+    # (not derived from a documented default - two false starts first: an
+    # assumed "-Z default, X-axis pitch" produced only sky, and a
+    # straight-above framing got blocked by the X-carriage sitting right
+    # below it at z=0.3). What actually held: identity orientation looks
+    # HORIZONTALLY (same finding as the Viewpoint node elsewhere in this
+    # file), and Y-axis rotation (not X) is the pitch control in this
+    # ENU-remapped setup. Final placement sits beside the carriage's X
+    # travel range (+-0.08) rather than above it, angled across to the
+    # button plane.
+    Camera {
+      translation 0.2 0 0.3
+      rotation 0 1 0 2.3
+      name "kiosk_camera"
+      width 320
+      height 240
+      fieldOfView 1.0
+    }
+    SliderJoint {
+      jointParameters JointParameters {
+        axis 1 0 0
+        minStop -0.08
+        maxStop 0.08
+      }
+      device [
+        LinearMotor {
+          name "gantry_x_motor"
+          minPosition -0.08
+          maxPosition 0.08
+          maxForce 30
+        }
+        PositionSensor {
+          name "gantry_x_position"
+        }
+      ]
+      endPoint Solid {
+        translation 0 0 0.3
+        children [
+          Shape {
+            appearance PBRAppearance {
+              baseColor 0.3 0.3 0.3
+            }
+            geometry Box {
+              size 0.03 0.03 0.03
+            }
+          }
+          SliderJoint {
+            jointParameters JointParameters {
+              axis 0 0 -1
+              minStop 0.0
+              maxStop 0.19
+            }
+            device [
+              LinearMotor {
+                name "gantry_z_motor"
+                minPosition 0.0
+                maxPosition 0.19
+                maxForce 30
+              }
+              PositionSensor {
+                name "gantry_z_position"
+              }
+            ]
+            endPoint DEF PLUNGER_TIP Solid {
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.1 0.1 0.1
+                  }
+                  geometry Cylinder {
+                    height 0.03
+                    radius 0.006
+                  }
+                }
+                DEF TOUCH_SENSOR TouchSensor {
+                  translation 0 0 -0.015
+                  name "plunger_tip"
+                  children [
+                    Shape {
+                      appearance PBRAppearance {
+                        baseColor 1 0 0
+                      }
+                      geometry Sphere {
+                        radius 0.004
+                      }
+                    }
+                  ]
+                  boundingObject Sphere {
+                    radius 0.004
+                  }
+                  physics Physics {
+                    density -1
+                    mass 0.01
+                  }
+                  lookupTable [
+                    0 0 0
+                    0.01 1 0
+                  ]
+                }
+              ]
+              boundingObject Cylinder {
+                height 0.03
+                radius 0.006
+              }
+              physics Physics {
+                density -1
+                mass 0.02
+              }
+            }
+          }
+        ]
+        boundingObject Box {
+          size 0.03 0.03 0.03
+        }
+        physics Physics {
+          density -1
+          mass 0.1
+        }
+      }
+    }
   ]
+  boundingObject Pose {
+    translation 0 0 0.05
+    children [
+      USE RISER
+    ]
+  }
+}
+
+# Purely decorative - a real Laptop PROTO (it has its own controller slot,
+# i.e. it's a Robot node, so it must be a top-level sibling here, not nested
+# inside computer_arm's own children). Placed in world coordinates clear of
+# computer_arm's riser (world x in [1.16,1.44]) and the gantry's operating
+# envelope (world x in [1.22,1.38], y=-1.1, z 0.11-0.30), so its own
+# boundingObject can't obstruct a real press. The functional "computer" the
+# gantry actually presses stays the button panel on computer_arm; this just
+# gives the workstation a recognizable "there's a laptop here too" visual
+# read, per the user's request for clearer, more recognizable props than
+# plain colored boxes.
+Laptop {
+  translation 1.55 -1.1 0
+  rotation 0 0 1 2.6
+  name "computer_arm_laptop_prop"
+  controller "<none>"
 }

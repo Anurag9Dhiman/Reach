@@ -69,10 +69,13 @@ would need a paid tier or a similar model swap.
 
 Legend: ✅ implemented and run · ⚠️ run, but see caveat · 🚫 blocked (see reason)
 
-**28 of 33 complete** (29 counting E8's automated part separately from its
-blocked human-timing sub-part). Every experiment that doesn't require a
-Webots install or a real human operator is done. The remaining 5 are
-genuinely blocked, not skipped:
+**31 of 33 complete** (32 counting E8's automated part separately from its
+blocked human-timing sub-part). Webots was installed and Gatekeeper-approved
+2026-10-01 (see webots/README.md), unblocking E16, E17, and E18 - all three
+have now been attempted for real. E18's physical half succeeded cleanly in
+all 3 attempts; its digital half hit a genuine, sustained external Gemini
+503 outage each time (see its row below) - attempted and honestly reported,
+not blocked. The remaining 2 are genuinely blocked, not skipped:
 
 | ID | Title | ACS | Status |
 |---|---|---|---|
@@ -91,9 +94,9 @@ genuinely blocked, not skipped:
 | E13 | Latency Breakdown | fake | ✅ (PAR-side stages only — ACS-internal perceive/plan/ground/verify needs instrumenting CollectiveOS itself, out of scope) |
 | E14 | Task Complexity Scaling | fake ACS, scripted planner | ✅ (pipeline scaling only — planner-reasoning-at-scale is E9/E10/E19's job) |
 | E15 | Multiple Delegation Cycles | fake ACS, scripted planner | ✅ (empirically confirms task failure probability compounds with delegation count) |
-| E16 | Physical Safety Constraint Evaluation (Webots) | — | 🚫 no Webots install |
-| E17 | Webots End-to-End Validation | — | 🚫 no Webots install |
-| E18 | Physical–Digital Task Execution in Simulation (Webots) | — | 🚫 no Webots install |
+| E16 | Physical Safety Constraint Evaluation (Webots) | — | ✅ real WebotsRobot vs MockRobot agree on all 10 scenarios (DecisionAccuracy=1.0 both), task_recovery=True through a real robot too - the kernel's decision depends only on the Observation's values, not which interface produced it |
+| E17 | Webots End-to-End Validation | — | ✅ one real run: waypoint nav + target approach converge (within 5cm tolerance), live collision denial, live workspace-violation denial, e-stop blocks-then-recovers - all against a real Webots process, all_checks_passed=True |
+| E18 | Physical–Digital Task Execution in Simulation (Webots) | real | ⚠️ 3 real attempts: physical half (waypoint nav, live collision denial) succeeded identically all 3 times; digital half (real ACS delegation) hit an identical Gemini 503 "high demand" outage all 3 times, across both quota pools (flash-lite x2, flash x1) - external-service-degradation finding, independently reconfirming E29's same-day outage from a different angle, not a Reach-side failure. `Runtime.run_task` correctly stopped the sequence after the genuine execution failure, exactly as designed |
 | E19 | Planner Comparison | fake ACS, real Gemini + rule-based planners | ✅ rule_based: 0% task success (can't parse natural-language goals or emit task_complete); gemini: 69% — a stark, real finding on planner dependency |
 | E20 | ACS Interoperability | fake x2 | ✅ |
 | E21 | Capability Abstraction Evaluation | fake | ✅ (structural comparison only — live planner comparison needs quota) |
@@ -108,12 +111,13 @@ genuinely blocked, not skipped:
 | E30 | Robustness to Observation Noise | none (direct kernel eval) | ✅ (collision check is purely position-based — mislabeling doesn't fool it, but missing/corrupted position data does) |
 | E31 | Robustness to ACS Errors | fake | ✅ (PAR accepts incorrect/incomplete/ambiguous ACS results as success identically to a correct one — no semantic verification exists) |
 | E32 | End-to-End Robustness Under Combined Failures | fake | ✅ (surfaces a real gap: an all-denials task exhausts `max_steps` stuck at `PLANNING`, neither `DONE` nor `FAILED`) |
-| E33 | Overall Systems Benchmark | mixed | ✅ aggregates all 32 others — 28/33 complete, 5/33 blocked, 0 not-yet-run as of this snapshot |
+| E33 | Overall Systems Benchmark | mixed | ✅ aggregates all 32 others — 31/33 complete, 2/33 blocked, 0 not-yet-run as of this snapshot |
 
-**Blocked (5): E16, E17, E18 need a real Webots install; E23 and E8's
-human-timing sub-part need a real human operator running trials personally.
-Nothing else in the 33-experiment plan remains to attempt with what's
-available in this environment.**
+**Blocked (2): E23 and E8's human-timing sub-part need a real human operator
+running trials personally - nothing else can substitute for that. Every
+other experiment in the 33-experiment plan has now been attempted with
+what's available in this environment, including all three that needed a
+real Webots install (E16, E17, E18).**
 
 Full experiment specs (research question, design, metrics) are in memory:
 [[reach-experiments-overview]] and its five topic files, not duplicated here.

@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # Brings up the whole Reach simulation with one command: Webots (physical
-# robot), par_bridge.py (the extern controller bridging it to Pulse), and
-# CollectiveOS (the real computer-use agent). Previously this was three-plus
-# manually-run terminals with hand-set env vars - this script is that,
-# scripted and made idempotent, not a new capability.
+# robot + computer_arm kiosk), par_bridge.py (the e-puck's extern
+# controller), computer_arm_bridge.py (the kiosk gantry's extern
+# controller - Webots won't step at all until both are connected, not just
+# one), and CollectiveOS (the real computer-use agent, for the
+# CollectiveOSBridge path rather than the physically-real gantry path).
+# Previously this was four-plus manually-run terminals with hand-set env
+# vars - this script is that, scripted and made idempotent, not a new
+# capability.
 #
 # What it does NOT do: grant macOS permissions. Screen Recording (for
 # CollectiveOS to see your screen) and Accessibility (for its UI-inspection
@@ -36,7 +40,7 @@ if [[ "${1:-}" == "--stop" ]]; then
     # robot's live position, camera pan from manual navigation, internal
     # joint state), clobbering the authored default arena. SIGKILL can't be
     # caught, so no such save ever happens.
-    for name in webots par_bridge collectiveos; do
+    for name in webots par_bridge computer_arm_bridge collectiveos; do
         pidfile="$STATE_DIR/$name.pid"
         if [[ -f "$pidfile" ]]; then
             pid="$(cat "$pidfile")"
@@ -52,7 +56,9 @@ if [[ "${1:-}" == "--stop" ]]; then
     # cleanup by pattern, scoped tightly enough not to catch unrelated work.
     pkill -9 -f "MacOS/webots.*par_arena.wbt" 2>/dev/null || true
     pkill -9 -f "par_bridge/par_bridge.py" 2>/dev/null || true
+    pkill -9 -f "computer_arm_bridge/computer_arm_bridge.py" 2>/dev/null || true
     pkill -9 -f "uvicorn src.api:app --port $COS_PORT" 2>/dev/null || true
+    rm -f "$STATE_DIR/webots.port"
     exit 0
 fi
 
@@ -88,9 +94,22 @@ export PYTHONPATH="$WEBOTS_HOME/Contents/lib/controller/python:${PYTHONPATH:-}"
 # -- 1. Webots ----------------------------------------------------------------
 if [[ -f "$STATE_DIR/webots.pid" ]] && kill -0 "$(cat "$STATE_DIR/webots.pid")" 2>/dev/null; then
     log "Webots already running (pid $(cat "$STATE_DIR/webots.pid"))"
+    WEBOTS_PORT="$(cat "$STATE_DIR/webots.port")"
 else
-    log "starting Webots..."
-    nohup "$WEBOTS_APP/Contents/MacOS/webots" --mode=realtime --stdout --stderr \
+    # NOT the Webots default (1234): a Webots instance's <extern>
+    # connection-slot state can accumulate across many relaunches on the
+    # SAME port within one working session, eventually causing silent
+    # connection failures or a phantom "ambiguous extern controller" name
+    # list from long-closed sessions (found the hard way - see
+    # webots/README.md's "reused port gotcha"). A fresh port each time this
+    # actually starts Webots avoids ever colliding with that accumulated
+    # state, rather than just reducing how often it happens - persisted to
+    # webots.port so idempotent re-runs against an already-running instance
+    # reuse the same port instead of re-randomizing.
+    WEBOTS_PORT="$((20000 + RANDOM % 20000))"
+    echo "$WEBOTS_PORT" > "$STATE_DIR/webots.port"
+    log "starting Webots on port $WEBOTS_PORT..."
+    nohup "$WEBOTS_APP/Contents/MacOS/webots" --port="$WEBOTS_PORT" --mode=realtime --stdout --stderr \
         "$REACH_ROOT/webots/worlds/par_arena.wbt" > "$STATE_DIR/webots.log" 2>&1 &
     echo $! > "$STATE_DIR/webots.pid"
     sleep 6
@@ -100,13 +119,27 @@ else
 fi
 
 # -- 2. par_bridge.py -----------------------------------------------------------
+# Webots holds the ENTIRE simulation paused at t=0 until every
+# extern-controller robot has connected, not just the one being tested - so
+# both this and computer_arm_bridge.py (step 2b) must be running before
+# anything moves, even if you only care about testing one of them.
 if [[ -f "$STATE_DIR/par_bridge.pid" ]] && kill -0 "$(cat "$STATE_DIR/par_bridge.pid")" 2>/dev/null; then
     log "par_bridge already running (pid $(cat "$STATE_DIR/par_bridge.pid"))"
 else
-    log "starting par_bridge.py (waits for Webots' simulation to be running)..."
-    nohup "$PULSE_VENV/bin/python3" "$REACH_ROOT/webots/controllers/par_bridge/par_bridge.py" \
-        > "$STATE_DIR/par_bridge.log" 2>&1 &
+    log "starting par_bridge.py on port $WEBOTS_PORT (waits for Webots' simulation to be running)..."
+    WEBOTS_CONTROLLER_URL="ipc://$WEBOTS_PORT/epuck" nohup "$PULSE_VENV/bin/python3" \
+        "$REACH_ROOT/webots/controllers/par_bridge/par_bridge.py" > "$STATE_DIR/par_bridge.log" 2>&1 &
     echo $! > "$STATE_DIR/par_bridge.pid"
+fi
+
+# -- 2b. computer_arm_bridge.py ---------------------------------------------
+if [[ -f "$STATE_DIR/computer_arm_bridge.pid" ]] && kill -0 "$(cat "$STATE_DIR/computer_arm_bridge.pid")" 2>/dev/null; then
+    log "computer_arm_bridge already running (pid $(cat "$STATE_DIR/computer_arm_bridge.pid"))"
+else
+    log "starting computer_arm_bridge.py on port $WEBOTS_PORT..."
+    WEBOTS_CONTROLLER_URL="ipc://$WEBOTS_PORT/computer_arm" nohup "$PULSE_VENV/bin/python3" \
+        "$REACH_ROOT/webots/controllers/computer_arm_bridge/computer_arm_bridge.py" > "$STATE_DIR/computer_arm_bridge.log" 2>&1 &
+    echo $! > "$STATE_DIR/computer_arm_bridge.pid"
 fi
 
 # -- 3. CollectiveOS ------------------------------------------------------------
@@ -124,27 +157,29 @@ else
     popd >/dev/null
 fi
 
-log "waiting for the bridge (ws://localhost:$BRIDGE_PORT) and CollectiveOS (http://localhost:$COS_PORT)..."
+log "waiting for both bridges (ws://localhost:$BRIDGE_PORT, ws://localhost:6002) and CollectiveOS (http://localhost:$COS_PORT)..."
 for i in $(seq 1 30); do
-    bridge_up=0; cos_up=0
+    bridge_up=0; arm_up=0; cos_up=0
     grep -q "listening on ws" "$STATE_DIR/par_bridge.log" 2>/dev/null && bridge_up=1
+    grep -q "listening on ws" "$STATE_DIR/computer_arm_bridge.log" 2>/dev/null && arm_up=1
     curl -s -o /dev/null "http://localhost:$COS_PORT/" 2>/dev/null && cos_up=1
-    [[ "$bridge_up" == 1 && "$cos_up" == 1 ]] && break
+    [[ "$bridge_up" == 1 && "$arm_up" == 1 && "$cos_up" == 1 ]] && break
     sleep 2
 done
 
-if [[ "$bridge_up" != 1 ]]; then
-    log "par_bridge isn't listening yet - it waits for Webots' simulation to actually be running, not just loaded. Check $STATE_DIR/par_bridge.log and $STATE_DIR/webots.log."
+if [[ "$bridge_up" != 1 || "$arm_up" != 1 ]]; then
+    log "not both extern controllers are listening yet - Webots holds the whole simulation paused until BOTH connect, not just one. Check $STATE_DIR/par_bridge.log, $STATE_DIR/computer_arm_bridge.log and $STATE_DIR/webots.log."
 fi
 if [[ "$cos_up" != 1 ]]; then
     log "CollectiveOS isn't responding yet. Check $STATE_DIR/collectiveos.log."
 fi
-[[ "$bridge_up" == 1 && "$cos_up" == 1 ]] && log "both up. Robot can now move (via par_bridge) and delegate (via CollectiveOS)."
+[[ "$bridge_up" == 1 && "$arm_up" == 1 && "$cos_up" == 1 ]] && log "all up. Robot can move (par_bridge), press computer_arm's buttons for real (computer_arm_bridge), and delegate to the real screen (CollectiveOS)."
 
 echo
-log "Webots window is open on your screen - the e-puck robot and the arena (including the 'laptop' prop) are there to look at directly."
-log "Logs: $STATE_DIR/{webots,par_bridge,collectiveos}.log"
+log "Webots window is open on your screen - the e-puck robot and the arena (including the 'computer_arm' kiosk) are there to look at directly."
+log "Logs: $STATE_DIR/{webots,par_bridge,computer_arm_bridge,collectiveos}.log"
 log "Stop everything with: ./scripts/run_simulation.sh --stop"
+log "Run examples/simulated_arm_loop.py instead of --demo for the physically-real gantry path (PAR_COMPUTER_USE_MODE=simulated_arm) - see webots/README.md."
 
 # -- optional demo run --------------------------------------------------------
 if [[ "${1:-}" == "--demo" ]]; then
