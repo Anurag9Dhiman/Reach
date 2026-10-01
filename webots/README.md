@@ -61,10 +61,10 @@ texture downloads, which fail over this network but don't affect physics).
 
 ## Run
 
-There are two independent ways to watch `use_computer` happen physically,
+There are three independent ways to watch `use_computer` happen physically,
 sharing the same physical tour but differing in what the digital half
-actually is. Both need the e-puck's bridge; the gantry path additionally
-needs `computer_arm_bridge.py`.
+actually is. All three need the e-puck's bridge; the two gantry paths
+additionally need `computer_arm_bridge.py`.
 
 **Important**: Webots holds the *entire* simulation paused at t=0 until
 *every* extern-controller robot in the world has connected - with both the
@@ -84,7 +84,7 @@ running, not just the one you're testing.
    It should print `PAR-Webots bridge listening on ws://localhost:6001`.
 
 3. **For the CollectiveOS (real host screen) path**, skip to step 4. **For
-   the physically-real gantry path**, also start, in a fourth terminal:
+   either physically-real gantry path**, also start, in a fourth terminal:
 
    ```bash
    python3 webots/controllers/computer_arm_bridge/computer_arm_bridge.py
@@ -97,9 +97,12 @@ running, not just the one you're testing.
 
    ```bash
    pip install -e ".[webots]"
-   python examples/webots_loop.py           # delegates to real CollectiveOS
+   python examples/webots_loop.py             # delegates to real CollectiveOS
    # or:
-   python examples/simulated_arm_loop.py    # delegates to computer_arm's gantry
+   python examples/simulated_arm_loop.py      # gantry, keyword-matched button choice
+   # or:
+   python examples/vision_guided_arm_loop.py  # gantry, Gemini-vision-chosen button
+                                               # (needs GEMINI_API_KEY; spends real quota)
    ```
 
    Watch the Webots window: the e-puck rotates to face, then drives to, a
@@ -109,7 +112,7 @@ running, not just the one you're testing.
    `blue_container`; then delegates `use_computer` (see below for what that
    looks like in each mode); then stops.
 
-## Two ways `use_computer` becomes physical
+## Three ways `use_computer` becomes physical
 
 **`examples/webots_loop.py` (default, `CollectiveOSBridge`)** — the digital
 half runs on the real host screen. The e-puck can't type, so what's
@@ -140,6 +143,31 @@ end to end 2026-09-30: a real `use_computer("check whether any maintenance
 alerts are open")` call produced `"pressed 'check'; kiosk now shows: 1
 ALERT: LOW BATTERY"` — a real button, really pressed, really changing a
 real (if small) simulated computer's displayed state.
+
+**`examples/vision_guided_arm_loop.py` (`PAR_COMPUTER_USE_MODE=vision_guided_arm`,
+`VisionGuidedArmBridge`)** — same physical gantry as above, but *which*
+button to press is decided by real Gemini vision instead of keyword
+matching: `computer_arm_bridge.py` exposes a `kiosk_camera` `Camera` device
+(a child of `computer_arm`, framing the three-button panel) via a
+`capture_camera` action; `VisionGuidedArmBridge` fetches that real JPEG,
+sends it to `gemini-3.1-flash-lite` alongside the task text and a
+`response_schema`-constrained prompt, and presses whichever button Gemini
+names (or fails cleanly if it names `"none"`) — the same
+real-vision-grounds-the-decision pattern CollectiveOS's own `nav_agent.py`
+uses against the real host screen, just scoped to a 3-way choice. Verified
+end to end 2026-10-01, starting from the kiosk's genuine idle `"READY"`
+state (not staged): Gemini's own stated reasoning was *"The panel is in its
+idle state, so the check button must be pressed to view any potential
+maintenance alerts"*, it correctly named `check` (not `confirm`, which would
+have been wrong from this starting state), and the gantry then pressed it
+for real, changing the kiosk to `"1 ALERT: LOW BATTERY"` — confirming the
+decision was actually state-grounded, not a lucky guess. Uses
+`gemini-3.1-flash-lite` rather than CollectiveOS's `gemini-3.6-flash`
+specifically to avoid that model's 20-requests-per-day cap (see
+`experiments/README.md`); confirmed by a real call that flash-lite accepts
+image input, so no fallback model was needed. This path spends real Gemini
+quota (one call per `use_computer` delegation) — `simulated_arm_loop.py`
+stays the free/instant alternative for repeated testing.
 
 **Building this uncovered two real, non-obvious mechanics of the gantry
 itself**, both found via live Webots runs, not from documentation:

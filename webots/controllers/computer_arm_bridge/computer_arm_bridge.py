@@ -23,6 +23,11 @@ Wire protocol:
      "parameters": {"button": "check" | "confirm" | "clear"}}
         -> {"success": bool, "message": str}
 
+    {"type": "action", "action_id": str, "skill_name": "capture_camera",
+     "parameters": {}}
+        -> {"success": bool, "message": str}  # message is the saved JPEG's
+                                               # path on success
+
 Verified against a real Webots R2025a run (2026-09-30): contact detection
 requires polling the TouchSensor continuously during the downward move, not
 just checking after the motor settles - the contact force is a brief
@@ -32,6 +37,7 @@ file was written; see git history for the spike's 1/10 vs 10/10 result).
 from __future__ import annotations
 
 import json
+import os
 import queue
 import threading
 import time
@@ -43,6 +49,16 @@ from websockets.sync.server import serve
 
 _HOST = "localhost"
 _PORT = 6002
+
+# webots/controllers/computer_arm_bridge/computer_arm_bridge.py -> repo root,
+# matching run_simulation.sh's REACH_ROOT/.sim_state convention (already
+# gitignored) rather than inventing a second scratch location.
+_SNAPSHOT_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
+    ".sim_state",
+    "kiosk_snapshot.jpg",
+)
+_SNAPSHOT_QUALITY = 80
 
 _RUN_IN_FAST_MODE = True
 
@@ -141,6 +157,12 @@ class _ComputerArmBridge:
         self.touch = self.robot.getDevice("plunger_tip")
         self.touch.enable(self.timestep)
         self.display = self.robot.getDevice("kiosk_screen")
+        # None (not raised) if a world is run without the device - matches
+        # getDevice()'s own contract elsewhere in this file; _do_capture_camera
+        # degrades to a clean failure rather than crashing the bridge.
+        self.camera = self.robot.getDevice("kiosk_camera")
+        if self.camera is not None:
+            self.camera.enable(self.timestep)
 
         self.kiosk = _KioskApp()
         self._draw_screen()
@@ -225,6 +247,16 @@ class _ComputerArmBridge:
         screen_text = self.kiosk.press(button)
         self._draw_screen()
         return True, f"pressed '{button}'; screen now shows: {screen_text}"
+
+    def _do_capture_camera(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        # Message doubles as the saved path on success (no separate "path"
+        # field in the wire protocol - see module docstring's reply shapes),
+        # mirroring every other handler's single success-message convention.
+        if self.camera is None:
+            return False, "kiosk_camera device not found"
+        os.makedirs(os.path.dirname(_SNAPSHOT_PATH), exist_ok=True)
+        self.camera.saveImage(_SNAPSHOT_PATH, _SNAPSHOT_QUALITY)
+        return True, _SNAPSHOT_PATH
 
     def _do_home(self, parameters: dict[str, Any]) -> tuple[bool, str]:
         deadline = time.monotonic() + _MAX_PRESS_SECONDS
