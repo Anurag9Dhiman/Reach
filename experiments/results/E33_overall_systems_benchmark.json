@@ -1,7 +1,7 @@
 {
   "experiment_id": "E33",
   "title": "Overall Systems Benchmark",
-  "generated_at": "2026-10-01T02:51:15.178438+00:00",
+  "generated_at": "2026-10-01T15:49:57.117168+00:00",
   "config": {
     "aggregates": [
       "E1",
@@ -44,8 +44,8 @@
   "metrics": {
     "status_summary": {
       "total_experiments": 33,
-      "completed": 30,
-      "blocked": 3,
+      "completed": 31,
+      "blocked": 2,
       "not_yet_run": 0,
       "completed_ids": [
         "E1",
@@ -57,6 +57,7 @@
         "E15",
         "E16",
         "E17",
+        "E18",
         "E19",
         "E2",
         "E20",
@@ -80,7 +81,6 @@
         "E9"
       ],
       "blocked_ids": [
-        "E18",
         "E23",
         "E8b"
       ]
@@ -141,6 +141,6 @@
       "incorrect_result_accepted": true
     }
   },
-  "notes": "The PDF's own primary-metrics line is truncated in the source document ('...RecoveryRate, HumanEs...') - the exact intended final metric list could not be confirmed and should be re-checked against the original PDF. This report aggregates what's measurable today: 30/33 experiments completed, 3/33 explicitly blocked (Webots install, human operator, or exhausted quota - see README.md's status table for which), 0/33 not yet attempted. A real statistical comparison against baselines with confidence intervals, and qualitative examples of representative episodes, both need the quota-blocked experiments (especially E1's clean re-run and E2) to exist first - this is an honest snapshot of current coverage, not the final benchmark result the PDF describes.",
+  "notes": "The PDF's own primary-metrics line is truncated in the source document ('...RecoveryRate, HumanEs...') - the exact intended final metric list could not be confirmed and should be re-checked against the original PDF. This report aggregates what's measurable today: 31/33 experiments completed, 2/33 explicitly blocked (Webots install, human operator, or exhausted quota - see README.md's status table for which), 0/33 not yet attempted. A real statistical comparison against baselines with confidence intervals, and qualitative examples of representative episodes, both need the quota-blocked experiments (especially E1's clean re-run and E2) to exist first - this is an honest snapshot of current coverage, not the final benchmark result the PDF describes.",
   "trials": []
 }
