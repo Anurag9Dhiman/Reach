@@ -301,6 +301,33 @@ class _PandaBridge:
 # a startup/shutdown concern of main(), not of _PandaBridge itself.
 _VIEWER: Any = None
 
+# Optional frame-capture setup (used for paper figures and debug). Not a
+# live-system concern - only enabled by the --capture-dir CLI flag.
+_CAPTURE_DIR: str | None = None
+_CAPTURE_RENDERER: Any = None
+_CAPTURE_COUNTER: int = 0
+
+
+def _capture_frame(bridge: _PandaBridge, label: str) -> None:
+    """Renders the current scene state to <capture_dir>/<NNN>_<label>.png.
+    Called after each successful action when --capture-dir is set. Any
+    renderer error is caught and logged - frame capture must never block
+    the bridge's reply to Pulse."""
+    global _CAPTURE_COUNTER
+    if _CAPTURE_DIR is None or _CAPTURE_RENDERER is None:
+        return
+    try:
+        from PIL import Image
+        _CAPTURE_RENDERER.update_scene(bridge.data, camera=-1)
+        pixels = _CAPTURE_RENDERER.render()
+        _CAPTURE_COUNTER += 1
+        safe_label = "".join(c if c.isalnum() or c in "-_" else "_" for c in label)
+        path = f"{_CAPTURE_DIR}/{_CAPTURE_COUNTER:03d}_{safe_label}.png"
+        Image.fromarray(pixels).save(path)
+        print(f"[mujoco_bridge] captured frame: {path}", flush=True)
+    except Exception as exc:
+        print(f"[mujoco_bridge] frame-capture failed ({label}): {exc}", flush=True)
+
 
 def _handle_requests(bridge: _PandaBridge) -> None:
     """Drain any queued WS requests. Called from the main loop between
@@ -315,18 +342,29 @@ def _handle_requests(bridge: _PandaBridge) -> None:
         if message.get("type") == "get_observation":
             request.reply = bridge.observation_payload()
         elif message.get("type") == "action":
-            success, msg = bridge.run_action(
-                message.get("skill_name", ""), message.get("parameters", {})
-            )
+            skill = message.get("skill_name", "")
+            success, msg = bridge.run_action(skill, message.get("parameters", {}))
             request.reply = {"success": success, "message": msg}
+            if success:
+                _capture_frame(bridge, skill)
         else:
             request.reply = {"success": False, "message": f"unknown request type: {message.get('type')!r}"}
         request.done.set()
 
 
-def main(headless: bool = False) -> None:
-    global _VIEWER
+def main(headless: bool = False, capture_dir: str | None = None) -> None:
+    global _VIEWER, _CAPTURE_DIR, _CAPTURE_RENDERER
     bridge = _PandaBridge()
+
+    if capture_dir is not None:
+        import os as _os
+        _os.makedirs(capture_dir, exist_ok=True)
+        _CAPTURE_DIR = capture_dir
+        _CAPTURE_RENDERER = mujoco.Renderer(bridge.model, height=720, width=1280)
+        # Baseline frame at startup (par_home) so the first captured image is
+        # "arm at rest, before any Pulse-driven motion" - useful for the
+        # paper's figure sequence.
+        _capture_frame(bridge, "initial_home")
 
     server = serve(_ws_handler, _HOST, _PORT)
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -374,5 +412,8 @@ if __name__ == "__main__":
                         help="Run without the interactive viewer (CI / unit tests). "
                              "In headless mode plain `python` works; interactive mode on macOS "
                              "needs `mjpython`.")
+    parser.add_argument("--capture-dir", default=None,
+                        help="Directory to save a PNG frame after every successful action. "
+                             "Used for paper figures and debug; off by default.")
     args = parser.parse_args()
-    main(headless=args.headless)
+    main(headless=args.headless, capture_dir=args.capture_dir)

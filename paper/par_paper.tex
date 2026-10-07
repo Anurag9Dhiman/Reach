@@ -325,10 +325,43 @@ result rather than a crash, and a retry succeeded. PAR's and the ACS's unit and 
 including regression tests added after finding and fixing an authentication bug that had made the ACS's
 robot-facing WebSocket endpoint entirely unreachable, pass in full.
 
+\begin{figure*}[t]
+\centering
+\begin{minipage}{0.24\linewidth}
+  \centering
+  \includegraphics[width=\linewidth, trim=200 100 200 60, clip]{figures/fig_demo_1_home.png}\\
+  \footnotesize (a) Pre-tour: arm at \texttt{par\_home}.
+\end{minipage}
+\hfill
+\begin{minipage}{0.24\linewidth}
+  \centering
+  \includegraphics[width=\linewidth, trim=200 100 200 60, clip]{figures/fig_demo_2_near_red.png}\\
+  \footnotesize (b) After \texttt{move} near \texttt{red\_object}: Safety Kernel ALLOWS.
+\end{minipage}
+\hfill
+\begin{minipage}{0.24\linewidth}
+  \centering
+  \includegraphics[width=\linewidth, trim=200 100 200 60, clip]{figures/fig_demo_3_near_blue.png}\\
+  \footnotesize (c) After re-plan to \texttt{blue\_container} (a direct \texttt{move} onto the red object was DENIED by the collision check in between).
+\end{minipage}
+\hfill
+\begin{minipage}{0.24\linewidth}
+  \centering
+  \includegraphics[width=\linewidth, trim=200 100 200 60, clip]{figures/fig_demo_4_docked.png}\\
+  \footnotesize (d) End-effector docked at the laptop prop while \texttt{use\_computer} is delegated to CollectiveOS.
+\end{minipage}
+\caption{Four moments from a single real end-to-end run of the arena tour example (\texttt{examples/mujoco\_loop.py}): a Franka Emika Panda arm in MuJoCo being driven by Pulse's scripted planner through the Safety Kernel. Panel (c) is the clearest visual evidence of the governance behavior the paper describes: between (b) and (c) a proposed \texttt{move} straight onto \texttt{red\_object} was denied by the Safety Kernel's collision-margin check, so no arm motion occurred for that step; the planner re-planned to the blue container next. Panel (d) shows the \texttt{begin\_computer\_use} hook docking the arm at the laptop prop for the duration of the delegation to CollectiveOS, making the hand-off a visible physical gesture rather than an invisible RPC. Frames rendered via \texttt{mujoco.Renderer} inside the bridge process; the exact camera is MuJoCo's default free camera, with no post-processing.}
+\label{fig:demo-sequence}
+\end{figure*}
+
 \subsection{Hardware-in-the-Loop MuJoCo Validation (New)}
 \label{sec:mujoco-real}
-The physical-simulation bridge (Section~\ref{sec:mujoco-integration}) was validated against a real MuJoCo
-installation on the development machine via two experiments. The first re-evaluated the same safety-kernel
+Figure~\ref{fig:demo-sequence} shows four frames from a real end-to-end run of the arena tour: an arm
+visibly reaching toward each prop under Pulse's governance, pausing in place when a proposed move
+would collide, and docking at a laptop prop for the duration of a \texttt{use\_computer} delegation to
+CollectiveOS -- the same delegation cycle sketched abstractly in Figure~\ref{fig:cycle}, now with
+pictures of it actually happening. Beyond the figure, the physical-simulation bridge (Section~\ref{sec:mujoco-integration})
+was validated against the real MuJoCo installation via two experiments. The first re-evaluated the same safety-kernel
 scenario battery used for the in-memory ablation study (Section~\ref{sec:ablation}) against a live
 \texttt{MuJoCoRobot}'s observation alongside the in-memory mock's, in the same run: both reached perfect
 decision accuracy on all ten scenarios and agreed with each other on every one, indicating the kernel's
