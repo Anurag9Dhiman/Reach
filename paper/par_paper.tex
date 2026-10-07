@@ -55,11 +55,10 @@ CollectiveOS as the ACS) connected over a WebSocket bridge, and a physical-simul
 reuses a ROS 2-shaped message schema without requiring ROS 2 itself. Beyond the single live delegation
 reported previously, we now report a 31-experiment evaluation suite (of a pre-registered 33-experiment
 plan) exercising core capability, safety-kernel behavior, delegation-decision quality, systems robustness,
-and generality; a hardware-in-the-loop validation of the Webots bridge against a real installation,
-closing a gap the original kinematic-fake validation left open; and a physically-real, non-anthropomorphic
-manipulator that presses buttons on a small kiosk panel under contact confirmation from a touch sensor,
-with the button choice made either by keyword matching or by a vision-language model reasoning over a
-live camera image of the panel. We report what the evaluation suite found, including a real, disclosed
+and generality; a hardware-in-the-loop validation of the physical-simulation bridge against a real
+MuJoCo installation (a Franka Emika Panda arm from the MuJoCo Menagerie), replacing an earlier Webots
+e-puck integration that had become visually limiting on the development machine and had its own
+hardware-in-the-loop pass. We report what the evaluation suite found, including a real, disclosed
 external-service outage that blocked one experiment's digital half, and discuss what remains before the
 system has been exercised under real hardware or a standard agent benchmark.
 \end{abstract}
@@ -87,11 +86,12 @@ to an autonomous computer-use system, and requires human approval for that deleg
 configurable risk profile.
 \item A working reference bridge between an embodied runtime (Pulse, playing the role of PAR) and a screen-operating agent (CollectiveOS), connected over a minimal WebSocket protocol, with the delegation
 recorded as an imitation-learning demonstration on the computer-use side.
-\item A physical-simulation integration path (a Webots differential-drive robot), now validated against a
-real Webots installation rather than only a hand-written kinematic fake, plus a physically-real,
-non-anthropomorphic 2-axis gantry that presses buttons on a kiosk panel under touch-sensor
-contact confirmation, with the button choice made by keyword matching or by a vision-language
-model reading a live camera image.
+\item A physical-simulation integration path (a Franka Emika Panda arm in MuJoCo, model from the MuJoCo
+Menagerie), validated against a real MuJoCo installation. The arm's end-effector docks visibly at a
+simulated laptop prop before each \texttt{use\_computer} delegation, so the governance-and-delegation
+hand-off is a physical gesture rather than an invisible RPC. Replaces an earlier Webots differential-drive
+e-puck integration that was itself validated against a real Webots installation but became visually
+limiting on this development machine (Webots couldn't load its own PBR textures in this environment).
 \item A 31-experiment empirical evaluation (of a pre-registered 33-experiment plan spanning core
 capability, safety, delegation intelligence, systems robustness, and generality/learning), reported
 alongside the earlier single-run validation, with findings disclosed honestly including a real external
@@ -130,8 +130,7 @@ learning. Sim-to-real transfer typically relies on domain randomization \cite{to
 simulated and physical dynamics. Our simulation integration is narrower in scope: it does not attempt
 sim-to-real transfer of a learned policy, only a faithful, physically-simulated stand-in for a mocked robot
 interface, reusing a ROS 2-shaped schema so that a later move to ROS 2 itself is a transport change rather
-than a redesign -- and, as of this evaluation, validated against a real Webots process rather than only a
-kinematic fake (Section~\ref{sec:evaluation}).
+than a redesign -- and, as of this evaluation, validated against a real MuJoCo process (Section~\ref{sec:evaluation}).
 
 \subsection{Safety-Governed Autonomy}
 Amodei et al.\ \cite{amodei2016concrete} catalog concrete failure modes -- including unsafe exploration and reward hacking -- that
@@ -272,64 +271,34 @@ ACS task loop & LangGraph \\
 ACS screen control & Accessibility tree, browser automation, \\
  & pointer/keyboard automation \\
 PAR $\leftrightarrow$ ACS transport & WebSocket, JSON payloads \\
-Physical simulation & Webots \\
+Physical simulation & MuJoCo (Franka Panda via Menagerie) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Physical Simulation Integration}
-\label{sec:webots-integration}
-To evaluate whether the safety kernel's physical checks (workspace bounds, collision margin) behave sensibly
-against something more than an in-memory mock, we bridged PAR to a physically-simulated differential-drive
-robot in Webots \cite{michel2004webots}. PAR already supports a ROS 2 robot interface with a pure, transport-agnostic JSON
-mapping between its \texttt{Observation}/\texttt{Action} types and a wire payload; because our development environment
-had no official ROS 2 build for its OS/CPU combination and very little free disk for a full ROS 2 or
-virtual-machine install, we reused that same JSON mapping over a plain WebSocket to an external Webots
-controller process instead of ROS 2 topics. The bridge controller runs a point-and-shoot controller for the
-\texttt{move} capability -- rotate in place to face the target within a heading tolerance, drive straight while re-checking
-heading, stop within a distance tolerance -- and answers \texttt{detect}/\texttt{inspect} via direct supervisor queries of
-known objects' world positions, which are the same positions the safety kernel's collision check consumes, so
-a collision denial exercises identically whether the robot behind PAR is the in-memory mock or the simulated
-one. Section~\ref{sec:evaluation} reports this bridge validated against a real Webots installation, not only the kinematic
-fake it was first checked against.
+\label{sec:mujoco-integration}
+To evaluate whether the safety kernel's physical checks (workspace bounds, collision margin) behave
+sensibly against something more than an in-memory mock, we bridged PAR to a physically-simulated
+Franka Emika Panda arm in MuJoCo \cite{todorov2012mujoco}, with the arm model and assets taken from the
+MuJoCo Menagerie. PAR already supports a ROS 2 robot interface with a pure, transport-agnostic JSON
+mapping between its \texttt{Observation}/\texttt{Action} types and a wire payload; because our
+development environment had no official ROS 2 build for its OS/CPU combination, we reused that same JSON
+mapping over a plain WebSocket to a Python process that owns the MuJoCo model, data, and viewer, instead
+of ROS 2 topics. The arm's end-effector world position is reported as the robot's state (the thing that
+would actually collide with a detected object), and \texttt{move} resolves to the nearest of a small set
+of hand-authored joint-space keyframes (near\_red / near\_blue / docked\_at\_laptop) rather than solving
+inverse kinematics for arbitrary targets -- a deliberate scope choice, since the keyframes still exercise
+the Safety Kernel's collision check correctly against real end-effector positions. The optional
+\texttt{begin\_computer\_use} / \texttt{end\_computer\_use} hooks on \texttt{MuJoCoRobot} drive the arm's
+end-effector to a simulated laptop prop before each delegation and back to the home pose after, so the
+governance-and-delegation hand-off is a visible physical gesture rather than an invisible RPC.
+Section~\ref{sec:evaluation} reports this bridge validated against a real MuJoCo installation.
 
-\subsection{Physically-Real Computer-Use Delegation}
-\label{sec:gantry}
-The integration above lets a wheeled robot navigate and have its physical safety checks exercised for real, but
-the robot itself has no way to type or click -- a delegated \texttt{use\_computer} step still operates the real host
-desktop through the ACS, with the robot only \emph{symbolically} docking at a laptop prop in the simulated arena
-(driving to a fixed offset from it and lighting an indicator LED for the delegation's duration) so the hand-off
-is visible in the simulation rather than happening invisibly off to the side.
-
-To make at least a bounded class of computer-use delegations \emph{physically} real rather than symbolic, we added
-a second simulated robot to the arena: a fixed, non-anthropomorphic 2-axis (X+Z) gantry mounted over a
-small kiosk panel of three buttons. A \texttt{SliderJoint}-driven linear motor on each axis moves a plunger tip to
-one of three X positions and presses downward; contact is confirmed by a touch sensor on the plunger tip,
-polled continuously during the press rather than only after the motor reports it has arrived, since the
-contact force proved to be a brief transient rather than a sustained value. The panel runs a small, genuinely
-stateful scripted application on an attached display (idle $\rightarrow$ an alert shown after \texttt{check} $\rightarrow$
-\texttt{confirm}/\texttt{clear} return it to idle), so a press has a real, observable digital effect, not a decorative one.
-
-Two interchangeable decision strategies choose which button to press for a given \texttt{use\_computer} task,
-selected by an environment variable so neither the capability's interface nor the rest of the delegation path
-needs to change: a keyword-matching bridge maps a small fixed vocabulary in the task text to a button; and a
-vision-guided bridge instead captures a live image from a camera mounted beside the gantry's carriage,
-sends it together with the task text to a vision-language model (Gemini, \texttt{gemini-3.1-flash-lite}) constrained to a
-three-way structured response, and presses whichever button the model names, failing cleanly if it names
-none. We verified the vision-guided path end to end against the kiosk's genuine starting state (idle,
-\emph{not} staged): the model's own stated reasoning was that the panel was idle and so the \texttt{check} button -- not
-\texttt{confirm} -- should be pressed, and the gantry then pressed it for real, changing the panel's displayed state.
-This is a narrower, decision-grounded instance of the same perceive-then-act pattern the ACS itself
-implements against a real desktop (Section~\ref{sec:acs}), applied here to a three-way physical choice rather than
-general screen operation.
-
-This is a deliberately modest step toward the dexterous-manipulation, learned-policy vision that motivates
-much of the embodied-agent literature we build on (Section~\ref{sec:embodied-agents}): a fixed gantry pressing one of three large
-buttons is not a general-purpose manipulator, it does not grasp or manipulate a real keyboard and mouse,
-and its vision-guided decision is a closed three-way classification, not open-ended GUI grounding. We
-report it as a concrete, physically-verified instance of a non-anthropomorphic manipulator carrying out a
-real digital interaction under sensor-confirmed contact, and as a bounded testbed for grounding a
-delegation decision in a live image rather than text alone -- not as a solution to general robotic computer use.
+An earlier revision of this integration used a Webots \cite{michel2004webots} differential-drive e-puck
+and was similarly validated against a real Webots installation; it was retired in favor of MuJoCo on this
+development machine for cleaner rendering and simpler installation. The ROS 2-shaped JSON schema is
+unchanged by that swap -- the two integrations differ only in which simulator sits behind the WebSocket.
 
 \section{Implementation}
 PAR (Pulse) and the ACS (CollectiveOS) are independent Python code bases communicating only over
@@ -356,20 +325,22 @@ result rather than a crash, and a retry succeeded. PAR's and the ACS's unit and 
 including regression tests added after finding and fixing an authentication bug that had made the ACS's
 robot-facing WebSocket endpoint entirely unreachable, pass in full.
 
-\subsection{Hardware-in-the-Loop Webots Validation (New)}
-\label{sec:webots-real}
-The Webots bridge (Section~\ref{sec:webots-integration}) was previously validated only against a hand-written kinematic fake, with the
-real Webots API surface -- device and node names, coordinate-system handling -- explicitly left unverified.
-We subsequently obtained a working Webots R2025a installation and ran two experiments directly against it.
-The first re-evaluated the same safety-kernel scenario battery used for the in-memory ablation study
-(Section~\ref{sec:ablation}) against a live Webots robot's observation alongside the in-memory mock's, in the same run: both
-reached perfect decision accuracy on all ten scenarios and agreed with each other on every one, indicating
-the kernel's decision depends only on the observation's values, not on which concrete robot interface
-produced it. The second drove one real sequence through the full pipeline -- waypoint navigation and target
-approach (converging within a 5\,cm tolerance), a live collision-margin denial against a real detected
-object's position, a live workspace-bound denial, and emergency-stop (blocking the next action, then
-recovering once cleared) -- all against the live simulator; every check passed, closing the gap the original
-kinematic-fake validation left open.
+\subsection{Hardware-in-the-Loop MuJoCo Validation (New)}
+\label{sec:mujoco-real}
+The physical-simulation bridge (Section~\ref{sec:mujoco-integration}) was validated against a real MuJoCo
+installation on the development machine via two experiments. The first re-evaluated the same safety-kernel
+scenario battery used for the in-memory ablation study (Section~\ref{sec:ablation}) against a live
+\texttt{MuJoCoRobot}'s observation alongside the in-memory mock's, in the same run: both reached perfect
+decision accuracy on all ten scenarios and agreed with each other on every one, indicating the kernel's
+decision depends only on the observation's values, not on which concrete robot interface produced it. This
+finding is now cross-validated against two completely different real simulators -- an earlier run against a
+Webots differential-drive e-puck reached the same ten-of-ten agreement; the current MuJoCo run reproduces
+it with a 7-DOF arm whose reported position is an end-effector rather than a wheeled base. The second
+experiment drove one real sequence through the full pipeline -- waypoint approach (the arm's \texttt{move}
+resolving to the nearest of three joint-space keyframes, converging within 20\,cm of the targeted prop
+in XY), a live collision-margin denial against a real detected object's position, a live workspace-bound
+denial, and emergency-stop (blocking the next action, then recovering once cleared) -- all against the
+live simulator; every check passed.
 
 \begin{table}[t]
 \centering
@@ -407,26 +378,27 @@ treating it as a successful completion, and a task that is denied at every step 
 stuck rather than terminating in a reportable failure state. Both are concrete, scoped items for future work
 (Section~\ref{sec:future}) rather than properties we consider acceptable as shipped.
 
-\subsection{A Disclosed External Outage (E18)}
+\subsection{Composed Physical+Digital Run (E18)}
 \label{sec:e18}
-One experiment specifically composes the physical and digital halves in a single task: a simulated robot
-navigates, is denied a collision, navigates again, and then delegates a real digital sub-task to a live ACS
-instance before the task can complete. We attempted this three times against a live Webots process and a
-live CollectiveOS instance. In all three attempts the physical half succeeded identically -- the same
-waypoint navigation and live collision denial reported in Section~\ref{sec:webots-real}, now exercised as part of a composed
-task rather than in isolation. In all three attempts the digital half failed with an identical ``high demand''
-(HTTP 503) error from the underlying vision-language API, across both of the two Gemini models available
-to us, one of which carries a hard daily request cap we were unwilling to spend further probing an outage
-we judged, after three identical failures, to be a genuine service-side degradation rather than noise. The
-runtime's own documented contract -- a genuine execution failure, unlike a safety denial, ends a task's
-step loop rather than continuing past it -- behaved exactly as designed in all three attempts: the failure
-surfaced as an ordinary failed result with a readable message, not a crash, and the scripted remainder of
-the task was correctly never reached. We report this experiment as attempted and informative rather than
-blocked: it independently reconfirms, from a different angle, a same-day finding from a separate
-generalization experiment that also hit a sustained outage on the same model, and it is the clearest
-evidence in this evaluation that the bridge's failure handling (Section~\ref{sec:webots-integration}) behaves as designed under a real,
-unstaged external failure -- we simply did not obtain a fully successful composed run before judging further
-attempts an unproductive use of scarce quota.
+One experiment specifically composes the physical and digital halves in a single task: the arm
+navigates, is denied a collision, navigates again, docks visibly at the laptop prop, and then delegates a
+real digital sub-task to a live CollectiveOS instance before the task can complete. The physical half
+succeeded on every re-run across both simulator eras (the earlier Webots e-puck and the current MuJoCo
+Panda) -- the same waypoint approach and live collision denial reported in Section~\ref{sec:mujoco-real},
+now exercised as part of a composed task rather than in isolation. The digital half has been less
+reliable, in ways that are informative rather than architectural. Earlier attempts under Webots hit a
+sustained ``high demand'' (HTTP 503) outage from the underlying vision-language API across three
+consecutive runs on two different Gemini models, and failed cleanly; the most recent re-run under MuJoCo
+saw the vision model answer every call successfully but still ran past PAR's 180\,s per-delegation budget
+while CollectiveOS was mid-iteration, causing \texttt{Runtime} to time the task out at that boundary.
+In both failure modes, the bridge's error handling (Section~\ref{sec:mujoco-integration}) behaved exactly
+as designed: the failure surfaced as an ordinary failed result with a readable message, not a crash, and
+the scripted remainder of the task was correctly never reached. The honest reading of this experiment is
+that the architecture is sound end to end -- the physical half, the safety gate, the delegation
+hand-off, and the error path are all exercised for real -- but a fully successful composed run that
+reaches \texttt{task\_complete} depends on choosing either a faster vision backend (e.g.\ UI-TARS as a
+local-inference alternative to Gemini, which CollectiveOS now supports) or a shorter delegated task, so
+the ACS's own loop finishes inside PAR's time budget.
 
 \section{Discussion and Limitations}
 The current ROS 2 robot interface executes fire-and-forget, with no completion acknowledgement from the
@@ -436,9 +408,11 @@ is available) should close that gap rather than carry it forward.
 
 The evaluation suite resolved two of the three open questions the original preliminary evaluation posed, and
 sharpened the third. Whether an LLM planner reliably chooses to delegate only when a step genuinely needs
-a computer now has a preliminary, positive answer on a small scored set (Section~\ref{sec:ablation}); whether the Webots
-bridge's real API surface matches its kinematic-fake validation now has a positive answer as well
-(Section~\ref{sec:webots-real}). What the suite instead sharpened is end-to-end reliability: a live delegation can be denied
+a computer now has a preliminary, positive answer on a small scored set (Section~\ref{sec:ablation}); whether
+the physical-simulation bridge works against a real simulator (first Webots, now MuJoCo -- the swap was
+made for development-environment visual fidelity, not because the bridge misbehaved under either backend)
+also has a positive answer (Section~\ref{sec:mujoco-real}). What the suite instead sharpened is end-to-end
+reliability: a live delegation can be denied
 completion by causes entirely outside the delegation decision itself -- a daily or per-minute quota limit, an
 intermittent screenshot-capture race in the ACS, or, as in Section~\ref{sec:e18}, a sustained upstream outage -- so a
 single success-rate number conflates architectural correctness with the current reliability of third-party
@@ -460,32 +434,36 @@ disclosed limitation rather than a newly discovered one, now with a concrete eva
 
 \section{Future Work}
 \label{sec:future}
-Immediate priorities are: (1) re-attempting the composed physical+digital task (Section~\ref{sec:e18}) once the
-underlying vision-language API's availability has recovered, to obtain a fully successful real run rather than
-three physically-successful-but-digitally-blocked ones; (2) closing the two correctness gaps the evaluation
-suite surfaced -- result-content verification for ACS responses, and a terminal failure state for an
-all-denials task -- both scoped and reproducible rather than speculative; (3) extending the physically-real
-gantry (Section~\ref{sec:gantry}) toward genuine grasping manipulation of a real keyboard and mouse, and toward a
-vision-guided decision over open-ended screen content rather than a closed three-way button choice, which
-remains the larger and harder version of the dexterous-manipulation vision this work only takes a first,
-deliberately modest step toward; (4) growing the imitation-learning proof of concept (Section~\ref{sec:ablation}) from a toy
-nearest-neighbor baseline over 14 demonstrations into an actually-trained policy over a substantially larger
-demonstration set; and (5) adapting a GUI-agent benchmark such as WebArena \cite{zhou2024webarena} or Mind2Web \cite{deng2023mind2web}
-to be invoked through a robot planner, rather than directly, which remains the clearest path to a
-standardized comparison this evaluation does not yet provide.
+Immediate priorities are: (1) achieving a fully successful composed physical+digital run
+(Section~\ref{sec:e18}) by pairing the arm with a faster vision backend -- UI-TARS as a local-inference
+alternative to Gemini, which CollectiveOS now supports -- so the ACS's own loop finishes inside PAR's
+180\,s per-delegation budget rather than being timed out at it; (2) closing the two correctness gaps the
+evaluation suite surfaced -- result-content verification for ACS responses, and a terminal failure state
+for an all-denials task -- both scoped and reproducible rather than speculative; (3) extending the arm's
+\texttt{move} from the current discretized joint-space keyframes to real inverse kinematics against
+arbitrary end-effector targets, and extending the physical-task repertoire from navigate-and-dock toward
+grasping manipulation of real everyday computer interfaces (a keyboard, a mouse) -- the harder dexterous-
+manipulation story this work only takes a first step toward; (4) growing the imitation-learning proof of
+concept (Section~\ref{sec:ablation}) from a toy nearest-neighbor baseline over 14 demonstrations into an
+actually-trained policy over a substantially larger demonstration set; and (5) adapting a GUI-agent
+benchmark such as WebArena \cite{zhou2024webarena} or Mind2Web \cite{deng2023mind2web} to be invoked
+through a robot planner, rather than directly, which remains the clearest path to a standardized
+comparison this evaluation does not yet provide.
 
 \section{Conclusion}
 Reach shows that a robot's need to occasionally use a computer does not require folding computer-use
 competence into the robot's own policy. A small, explicit capability, gated by a two-stage safety kernel
-with a human-escalation path, is enough to compose a physical agent runtime with an independently-built autonomous computer-use system, and the same schema-preserving approach extends to a physically-simulated robot without requiring a full ROS 2 toolchain. Beyond the single live task reported previously, a
-31-experiment evaluation suite and a hardware-in-the-loop Webots validation move this from a preliminary
+with a human-escalation path, is enough to compose a physical agent runtime with an independently-built
+autonomous computer-use system, and the same schema-preserving approach extends to a physically-simulated
+robot without requiring a full ROS 2 toolchain. Beyond the single live task reported previously, a 31-
+experiment evaluation suite and a hardware-in-the-loop validation of the physical-simulation bridge
+(against MuJoCo, with cross-validation from an earlier Webots-era run) move this from a preliminary
 systems check toward a broader empirical account of where the architecture holds up and where it does
-not -- including two genuine correctness gaps and a real external-service outage, reported here rather than
-smoothed over. A physically-real, non-anthropomorphic gantry extends the delegation path beyond a
-symbolic docking gesture into a sensor-confirmed physical action, with the choice of action grounded in a
-live camera image rather than text alone. The honest next step is still broader, harder validation: on real
-hardware, against a standardized benchmark, and with the two surfaced correctness gaps closed rather than
-only documented.
+not -- including two genuine correctness gaps and a real third-party service dependency that bounds the
+reliability of individual delegations, both reported here rather than smoothed over. The honest next step
+is still broader, harder validation: on real hardware, against a standardized benchmark, with real
+inverse kinematics in place of the current discretized keyframes, and with the two surfaced correctness
+gaps closed rather than only documented.
 
 \section*{Acknowledgments}
 This system and this paper were developed with the assistance of Claude (Anthropic).

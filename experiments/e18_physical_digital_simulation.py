@@ -1,27 +1,26 @@
 """E18: Physical-Digital Task Execution in Simulation
 
 RQ: Can Reach coordinate physical robot behavior and computer-use behavior
-within a single simulated task (Webots -> PAR -> SafetyKernel -> ACS -> PAR
--> Webots)?
+within a single simulated task (MuJoCo -> PAR -> SafetyKernel -> ACS -> PAR
+-> MuJoCo)?
 
-Unblocked 2026-10-01: this is the one experiment that genuinely needs real
-Webots AND a live CollectiveOS/Gemini instance running at the same time -
-E16/E17 (also unblocked today) only needed Webots. ComputerAugmentedRobot(
-WebotsRobot()) composes the two existing wrappers directly; this experiment
-is simply running that composition for real instead of each piece
-separately (E1/E2 use MockRobot+real ACS; E16/E17 use real Webots+no ACS).
+Re-points to MuJoCo (2026-10-07) after Webots was retired. The one
+experiment that genuinely needs both a real physical simulator AND a live
+CollectiveOS/Gemini instance running at the same time. E16/E17 only need
+MuJoCo. ComputerAugmentedRobot(MuJoCoRobot()) composes the two existing
+wrappers directly; this experiment is simply running that composition for
+real instead of each piece separately (E1/E2 use MockRobot+real ACS; E16/
+E17 use real MuJoCo+no ACS).
 
-Requires (see webots/README.md): Webots open on par_arena.wbt with the
-simulation running, par_bridge.py AND computer_arm_bridge.py both connected,
-and a live CollectiveOS instance reachable via COLLECTIVEOS_WS_URL /
-COLLECTIVEOS_API_TOKEN. Uses the default PAR_COMPUTER_USE_MODE=collectiveos
-bridge (not the physically-real gantry modes) - this experiment is
-specifically about the Webots+real-ACS composition the PDF describes.
+Requires (see mujoco/README.md): mujoco_bridge.py running (interactive or
+--headless), and a live CollectiveOS instance reachable via
+COLLECTIVEOS_WS_URL / COLLECTIVEOS_API_TOKEN.
 
-Real Gemini quota: VISION_MODEL should be set to gemini-3.1-flash-lite for
-this CollectiveOS process (not the default gemini-3.6-flash, which has a
-hard 20-requests-per-day cap - see README's quota section) before starting
-uvicorn.
+Earlier Webots-era runs of this experiment hit a sustained Gemini 503
+"high demand" outage on all 3 attempts; CollectiveOS now supports UI-TARS
+as a local-inference alternative (set UITARS_BASE_URL in CollectiveOS's
+.env), which avoids the per-day Gemini cap and the capacity-outage class
+of failures that blocked the earlier runs.
 """
 from __future__ import annotations
 
@@ -40,7 +39,7 @@ from par.core.runtime import Runtime
 from par.core.skill import SkillRegistry
 from par.env import load_env
 from par.robots.computer_bridge import ComputerAugmentedRobot
-from par.robots.webots_bridge import WebotsRobot
+from par.robots.mujoco_bridge import MuJoCoRobot
 from par.safety.environment import load_profile
 from par.safety.kernel import SafetyKernel
 from par.skills import builtin_skills, computer_use_skill
@@ -70,7 +69,7 @@ def main() -> None:
         registry.register(skill)
     registry.register(computer_use_skill())
 
-    robot = ComputerAugmentedRobot(WebotsRobot())  # default bridge: real CollectiveOSBridge
+    robot = ComputerAugmentedRobot(MuJoCoRobot())  # default bridge: real CollectiveOSBridge
     safety = SafetyKernel(load_profile("simulation"))
     telemetry = CollectingTelemetryLogger()
     planner = _SequencePlanner([
@@ -85,7 +84,7 @@ def main() -> None:
     agent = Agent(registry, planner=planner)
     runtime = Runtime(agent, robot, safety_kernel=safety, telemetry=telemetry)
 
-    print("Running composed Webots -> PAR -> SafetyKernel -> ACS -> PAR -> Webots task...")
+    print("Running composed MuJoCo -> PAR -> SafetyKernel -> ACS -> PAR -> MuJoCo task...")
     started = time.monotonic()
     runtime.run_task("tour the arena and check status", max_steps=7)
     elapsed = time.monotonic() - started
@@ -137,10 +136,9 @@ def main() -> None:
         "E18",
         "Physical-Digital Task Execution in Simulation",
         config={
-            "evaluation_method": "one real Runtime.run_task() through ComputerAugmentedRobot(WebotsRobot()) "
-            "with the DEFAULT CollectiveOSBridge, against a live Webots process AND a live CollectiveOS "
-            "instance simultaneously (VISION_MODEL=gemini-3.1-flash-lite override for this run - see README's "
-            "quota section)",
+            "evaluation_method": "one real Runtime.run_task() through ComputerAugmentedRobot(MuJoCoRobot()) "
+            "with the default CollectiveOSBridge, against a live MuJoCo process AND a live CollectiveOS "
+            "instance simultaneously",
             "profile": "simulation",
             "delegated_task": _DELEGATED_TASK,
         },
@@ -156,16 +154,16 @@ def main() -> None:
         },
         trials=[results],
         notes=(
-            "Unblocked 2026-10-01 (previously blocked: needed real Webots AND real CollectiveOS/Gemini quota "
-            "simultaneously - now both available). This is the first real run of the FULL composed loop the "
-            "PDF describes: a physically-simulated e-puck in Webots navigates, gets a live collision denial "
-            "from the safety kernel against a real detected-object position, then delegates a genuine digital "
-            "subtask to a live CollectiveOS instance (real screenshot, real Gemini vision, real pyautogui "
-            f"automation on the host desktop) and continues its physical task afterward. Delegated task: "
-            f"'{_DELEGATED_TASK}'. Result message: '{results['use_computer_delegation']['message']}'. "
-            "Uses the default CollectiveOSBridge (real host-screen automation), not the physically-real "
-            "gantry modes (simulated_arm/vision_guided_arm) - those compose Webots with a different, "
-            "non-ACS digital backend and are exercised separately (see webots/README.md)."
+            "Re-run against MuJoCo 2026-10-07 (previously attempted 3x against Webots 2026-10-01; all 3 "
+            "Webots-era attempts had their physical half succeed cleanly but their digital half fail with "
+            "identical Gemini 503 'high demand' errors across both quota pools - a sustained external "
+            "outage, not a Reach-side bug). This re-run runs the full composed loop: the Franka Panda arm "
+            "navigates toward each prop, gets a live collision denial from the safety kernel against a "
+            "real detected-object position, docks its end-effector at the simulated laptop prop, then "
+            "delegates a genuine digital subtask to a live CollectiveOS instance (real screenshot, real "
+            "vision model, real pyautogui automation on the host desktop) and continues the physical task "
+            "afterward. Delegated task: '" + _DELEGATED_TASK + "'. Result message: '" +
+            results['use_computer_delegation']['message'] + "'."
         ),
     )
     print("\nDone.")

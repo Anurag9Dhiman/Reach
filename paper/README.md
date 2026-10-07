@@ -1,11 +1,14 @@
 # Reach paper
 
-`par_paper.tex` is the Reach systems paper, updated 2026-10-01 to incorporate
-this repo's 31-experiment evaluation suite (`experiments/`), the real
-hardware-in-the-loop Webots validation (E16/E17), the disclosed external
-Gemini outage found while attempting E18, and the new physically-real
-computer-use gantry (`webots/worlds/par_arena.wbt`'s `computer_arm` +
-`Pulse/src/par/integrations/vision_guided_arm.py`).
+`par_paper.tex` is the Reach systems paper. Last updated 2026-10-07 to
+replace the Webots-era physical-simulation story with a MuJoCo Franka Panda
+one (see `mujoco/`), re-pointing Sections III.F / V.B / V.D / VI / VII and
+Table II at the new backend, dropping the retired physically-real gantry
+subsection (III.G) along with its vision-guided-button-choice narrative,
+and adding a cross-simulator-cross-validation framing to the hardware-in-
+the-loop finding. The 31-experiment evaluation suite (`experiments/`)
+remains the empirical core; E16, E17, and E18 were re-run against MuJoCo
+and their result files updated.
 
 Reconstructed from the originally-circulated `Reach_Project.pdf` (dated
 2026-09-24, from an Overleaf project) rather than edited from that project's

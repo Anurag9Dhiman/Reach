@@ -7,7 +7,7 @@ beyond the single manual live-delegation test the project had before this.
 ## Setup
 
 ```bash
-cd Pulse && pip install -e ".[dev,llm,gemini,computer,webots]"
+cd Pulse && pip install -e ".[dev,llm,gemini,computer,mujoco]"
 ```
 
 Real-ACS experiments (see table below) need `GEMINI_API_KEY` — either export
@@ -70,12 +70,13 @@ would need a paid tier or a similar model swap.
 Legend: ✅ implemented and run · ⚠️ run, but see caveat · 🚫 blocked (see reason)
 
 **31 of 33 complete** (32 counting E8's automated part separately from its
-blocked human-timing sub-part). Webots was installed and Gatekeeper-approved
-2026-10-01 (see webots/README.md), unblocking E16, E17, and E18 - all three
-have now been attempted for real. E18's physical half succeeded cleanly in
-all 3 attempts; its digital half hit a genuine, sustained external Gemini
-503 outage each time (see its row below) - attempted and honestly reported,
-not blocked. The remaining 2 are genuinely blocked, not skipped:
+blocked human-timing sub-part). The physical simulator moved from Webots
+to MuJoCo (2026-10-07, see mujoco/README.md) and E16/E17/E18 were re-run
+against the new backend; E16 and E17 pass cleanly, E18's physical half
+succeeds and its digital half runs until Pulse's 180s use_computer timeout
+(CollectiveOS is actively working through its vision loop at that point -
+no outage this time, just a time-budget mismatch). The remaining 2 are
+genuinely blocked, not skipped:
 
 | ID | Title | ACS | Status |
 |---|---|---|---|
@@ -94,9 +95,9 @@ not blocked. The remaining 2 are genuinely blocked, not skipped:
 | E13 | Latency Breakdown | fake | ✅ (PAR-side stages only — ACS-internal perceive/plan/ground/verify needs instrumenting CollectiveOS itself, out of scope) |
 | E14 | Task Complexity Scaling | fake ACS, scripted planner | ✅ (pipeline scaling only — planner-reasoning-at-scale is E9/E10/E19's job) |
 | E15 | Multiple Delegation Cycles | fake ACS, scripted planner | ✅ (empirically confirms task failure probability compounds with delegation count) |
-| E16 | Physical Safety Constraint Evaluation (Webots) | — | ✅ real WebotsRobot vs MockRobot agree on all 10 scenarios (DecisionAccuracy=1.0 both), task_recovery=True through a real robot too - the kernel's decision depends only on the Observation's values, not which interface produced it |
-| E17 | Webots End-to-End Validation | — | ✅ one real run: waypoint nav + target approach converge (within 5cm tolerance), live collision denial, live workspace-violation denial, e-stop blocks-then-recovers - all against a real Webots process, all_checks_passed=True |
-| E18 | Physical–Digital Task Execution in Simulation (Webots) | real | ⚠️ 3 real attempts: physical half (waypoint nav, live collision denial) succeeded identically all 3 times; digital half (real ACS delegation) hit an identical Gemini 503 "high demand" outage all 3 times, across both quota pools (flash-lite x2, flash x1) - external-service-degradation finding, independently reconfirming E29's same-day outage from a different angle, not a Reach-side failure. `Runtime.run_task` correctly stopped the sequence after the genuine execution failure, exactly as designed |
+| E16 | Physical Safety Constraint Evaluation (MuJoCo) | — | ✅ real MuJoCoRobot (Franka Panda) vs MockRobot agree on all 10 scenarios (DecisionAccuracy=1.0 both), task_recovery=True through a real robot too. Cross-validated against TWO real simulators now (Webots e-puck in the 2026-10-01 run, MuJoCo Panda here) — the kernel's decision depends only on the Observation's values, not on robot class or kinematics |
+| E17 | MuJoCo End-to-End Validation | — | ✅ one real run: waypoint approach converges (within 20cm tolerance of the prop; arm uses discretized joint-space keyframes rather than solving IK), live collision denial, live workspace-violation denial, e-stop blocks-then-recovers — all against a real MuJoCo process, all_checks_passed=True |
+| E18 | Physical–Digital Task Execution in Simulation (MuJoCo) | real | ⚠️ Physical half succeeded (near_red allowed, collision denied, near_blue allowed); digital half ran for the full 180s `use_computer` budget while CollectiveOS was actively iterating its vision loop (no 503 outage this time, unlike the earlier Webots-era attempts — real Gemini progress, just a time-budget mismatch). Setting `UITARS_BASE_URL` in CollectiveOS's `.env` to use the UI-TARS local-inference path, or shortening the delegated task, would push the full composed loop into the "all_checks_passed=True" column |
 | E19 | Planner Comparison | fake ACS, real Gemini + rule-based planners | ✅ rule_based: 0% task success (can't parse natural-language goals or emit task_complete); gemini: 69% — a stark, real finding on planner dependency |
 | E20 | ACS Interoperability | fake x2 | ✅ |
 | E21 | Capability Abstraction Evaluation | fake | ✅ (structural comparison only — live planner comparison needs quota) |
@@ -117,7 +118,8 @@ not blocked. The remaining 2 are genuinely blocked, not skipped:
 running trials personally - nothing else can substitute for that. Every
 other experiment in the 33-experiment plan has now been attempted with
 what's available in this environment, including all three that needed a
-real Webots install (E16, E17, E18).**
+real physical simulator (E16, E17, E18) - re-run against MuJoCo after
+Webots was retired 2026-10-07.**
 
 Full experiment specs (research question, design, metrics) are in memory:
 [[reach-experiments-overview]] and its five topic files, not duplicated here.

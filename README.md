@@ -34,9 +34,10 @@ Pulse and CollectiveOS are included as git submodules, pinned to `main`.
 | [Pulse](https://github.com/Anurag9Dhiman/Pulse) | **PAR — Physical Agent Runtime.** The governing framework: `Observation → Agent → Skill → Safety → Action`. Decides whether a computer step is allowed and dispatches it. |
 | [CollectiveOS](https://github.com/Anurag9Dhiman/CollectiveOS) | **Autonomous Computer System.** Its Navigation Agent performs screen-level computer tasks (perceive → plan → act) and records each run as a demonstration. |
 
-`webots/` (in this repo, not a submodule) is a Webots world + bridge
-controller giving PAR a real physically-simulated robot to drive instead of
-an in-memory mock — see "Robot simulation" below.
+`mujoco/` (in this repo, not a submodule) is an MJCF scene builder + bridge
+giving PAR a real physically-simulated robot (a Franka Emika Panda arm via
+the MuJoCo Menagerie) to drive instead of an in-memory mock — see "Robot
+simulation" below.
 
 ## How PAR and CollectiveOS connect
 
@@ -63,21 +64,21 @@ text result back into the loop so the robot can continue its physical task.
 `MockRobot` (Pulse's default) is an in-memory stand-in with no physics or
 rendering — useful for the loop's logic, useless for watching whether `move`
 or the Safety Kernel's collision-margin denial does something sensible. So
-PAR can also drive a real physically-simulated robot: a Webots e-puck,
-bridged in over a plain WebSocket (`webots/controllers/par_bridge/`, connects
-to Pulse's `WebotsRobot`). This reuses Pulse's ROS 2 JSON mapping schema
-unchanged, over WebSocket instead of ROS 2 topics — this machine has no
-ROS 2 (no official macOS/arm64 build) and too little free disk for a
-RoboStack/VM install, which is why it isn't `ROS2Robot` directly.
+PAR can also drive a real physically-simulated robot: a Franka Emika Panda
+arm in MuJoCo, bridged in over a plain WebSocket
+(`mujoco/bridge/mujoco_bridge.py`, connects to Pulse's `MuJoCoRobot`). This
+reuses Pulse's ROS 2 JSON mapping schema unchanged, over WebSocket instead
+of ROS 2 topics — this machine has no ROS 2 (no official macOS/arm64
+build), which is why it isn't `ROS2Robot` directly.
 
-**Not yet verified against a real Webots install** — none was available
-while this was built (Homebrew's `webots` cask is currently
-Gatekeeper-disabled; install it manually from cyberbotics.com). The Python
-control logic (the differential-drive `move` controller, the WebSocket
-threading) was verified against a fake Webots API simulating real robot
-kinematics. See `webots/README.md` for setup/run steps and the specific
-Webots-API assumptions (device names, PROTO fields) that still need a real
-install to confirm.
+MuJoCo was picked over Webots (the earlier integration, retired 2026-10-07)
+because its `pip install mujoco` works out of the box on this macOS/arm64
+machine, textures and materials actually render (Webots couldn't load its
+own PBR textures in this environment), and a 7-DOF Franka arm swinging
+dramatically between props reads as a real robotics demo in a way a
+two-wheeled e-puck did not. See `mujoco/README.md` for setup, run steps,
+and the explicit scope choices (joint-space keyframes instead of IK, no
+grasping).
 
 ## Quickstart
 
@@ -109,21 +110,24 @@ export COLLECTIVEOS_API_TOKEN=...   # same value as CollectiveOS's API_TOKEN
 python examples/computer_use_loop.py
 ```
 
-**Robot simulation** — see `webots/README.md`, then:
+**Robot simulation** — see `mujoco/README.md`, then:
 
 ```bash
 cd Pulse
-pip install -e ".[webots]"
-python examples/webots_loop.py
+pip install -e ".[mujoco]"
+# Terminal A - bridge + viewer (mjpython required on macOS for the window):
+mjpython ../mujoco/bridge/mujoco_bridge.py
+# Terminal B - run the demo:
+python examples/mujoco_loop.py
 ```
 
 ## Status
 
 - Computer-use bridge (`use_computer`, `ComputerAugmentedRobot`) — merged,
-  verified live (see above).
-- Webots bridge (`WebotsRobot`, `webots/`) — merged, **not yet run against
-  real Webots**; verified against a kinematic fake instead (see above).
+  verified live.
+- MuJoCo bridge (`MuJoCoRobot`, `mujoco/`) — merged, verified live against
+  a real MuJoCo installation (Franka Panda Menagerie model, full
+  physical-tour-+-delegation end to end).
 - Robot side has two options now: `MockRobot` (default, no physics) or
-  `WebotsRobot` (real physics, no rendering-verified run yet). Real hardware
-  would go through Pulse's ROS 2 adapter — not available on this dev machine
-  (see `webots/README.md`'s "no ROS 2 on macOS/arm64" note).
+  `MuJoCoRobot` (real physics + viewer). Real hardware would go through
+  Pulse's ROS 2 adapter — not available on this dev machine.
