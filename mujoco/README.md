@@ -128,7 +128,27 @@ couldn't.
   longer than Pulse's 180s `use_computer` timeout for complex tasks, which
   Runtime then reports as `action timed out`. The ACS itself still
   completes its own loop and saves a demonstration - this is a Pulse-side
-  timeout, not an ACS failure. For a reliably-successful demo, pick a
-  short real task or set `UITARS_BASE_URL` in CollectiveOS's `.env` to use
-  the UI-TARS local inference path (faster per-step than the Gemini-based
-  default).
+  timeout, not an ACS failure. Three ways to get a reliably-successful demo:
+  (a) pick a short real task (e.g. "which application is currently in the
+  foreground?" finishes in ~30s against Gemini and returns a correct answer
+  - verified live 2026-10-08); (b) set `UITARS_BASE_URL` in CollectiveOS's
+  `.env` to point at a local UI-TARS vLLM server (faster per-step than
+  Gemini, no per-day quota cap); (c) edit the `use_computer` capability's
+  `execution_timeout_seconds` in `par.skills.computer_use` to raise the
+  180s budget.
+
+## Pick-and-place manipulation
+
+A `pick_and_place({object, target})` skill is wired for the `red_object` ->
+`blue_container` pair: the arm approaches the cube from above (via two
+hover keyframes to keep the descent close to a straight vertical line in
+Cartesian space, since joint-space interpolation between distant poses can
+sweep the gripper sideways through the cube), closes the gripper, lifts,
+carries over to the bowl, lowers, opens the gripper, and verifies the
+cube landed inside the bowl's XY bounds before reporting success. The
+keyframes were solved by full 6-DOF IK (position + orientation) against
+the Panda's position-and-rotation Jacobian - earlier revisions used only
+position IK and the resulting tilted gripper pushed the cube out when
+closing. The red cube's `density=400` and `friction=(1.5, 0.03, 0.001)`
+are tuned so the grasp holds under lift acceleration without tweaking the
+Panda's actuator gains.

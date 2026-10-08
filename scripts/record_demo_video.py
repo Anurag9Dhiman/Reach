@@ -27,20 +27,36 @@ from scenes.par_arena import KEYFRAMES, build_model  # noqa: E402
 _FRAME_EVERY_N_STEPS = 20
 _FRAME_MS = 40  # 1000 / 25 = 40 ms per frame
 
-# Each tour step: (label, target_keyframe, physics_steps_to_interpolate).
-# Non-moving beats (DENIED, HOLD) advance physics with ctrl held at the
-# previous target, so the viewer gets a visible pause instead of a jump.
-_TOUR: list[tuple[str, str | None, int]] = [
-    ("home (initial)",                "par_home",             200),
-    ("hold at home",                  None,                   100),
-    ("move near red_object",          "par_near_red",         500),
-    ("hold near red",                 None,                   100),
-    ("[DENIED by Safety Kernel]",     None,                   150),  # no motion - this IS the governance
-    ("move near blue_container",      "par_near_blue",        700),
-    ("hold near blue",                None,                   100),
-    ("dock at laptop (use_computer)", "par_docked_at_laptop", 600),
-    ("hold at laptop (delegating)",   None,                   200),
-    ("undock to home",                "par_home",             500),
+# Each tour step: (label, target_keyframe, physics_steps, gripper_ctrl).
+# gripper_ctrl None keeps the previous gripper state; otherwise 0=closed,
+# 255=open. Non-moving beats (HOLD) advance physics with ctrl held at the
+# previous target so the viewer gets a visible pause instead of a jump.
+_TOUR: list[tuple[str, str | None, int, int | None]] = [
+    ("home (initial)",                "par_home",             200,   255),
+    ("hold at home",                  None,                   100,   None),
+    # Governance showcase: approach allowed, direct-onto-cube is denied,
+    # re-plan to blue.
+    ("move toward red_object",        "par_near_red",         500,   None),
+    ("hold",                          None,                   100,   None),
+    ("[DENIED by Safety Kernel]",     None,                   150,   None),
+    ("move toward blue_container",    "par_near_blue",        700,   None),
+    ("hold",                          None,                   100,   None),
+    # Pick-and-place: real manipulation of a freejoint cube.
+    ("approach above red cube",       "par_above_red",        500,   255),
+    ("hover above cube",              "par_hover_red",        300,   None),
+    ("lower to grasp pose",           "par_grasp_red",        200,   None),
+    ("close gripper",                 None,                   600,   0),
+    ("lift to hover",                 "par_hover_red",        300,   None),
+    ("lift high",                     "par_above_red",        400,   None),
+    ("carry to above blue bowl",      "par_above_blue",       800,   None),
+    ("hover above bowl",              "par_hover_blue",       300,   None),
+    ("lower to release pose",         "par_release_blue",     200,   None),
+    ("open gripper (drop cube)",      None,                   400,   255),
+    ("retreat from bowl",             "par_above_blue",       300,   None),
+    # Then delegate - visible dock at laptop.
+    ("dock at laptop (use_computer)", "par_docked_at_laptop", 600,   None),
+    ("hold at laptop (delegating)",   None,                   200,   None),
+    ("undock to home",                "par_home",             500,   None),
 ]
 
 _WIDTH, _HEIGHT = 960, 540
@@ -67,7 +83,7 @@ def main() -> None:
     renderer = mujoco.Renderer(model, height=_HEIGHT, width=_WIDTH)
     frames: list[Image.Image] = []
 
-    for label, target_keyframe, n_steps in _TOUR:
+    for label, target_keyframe, n_steps, gripper_ctrl in _TOUR:
         print(f"  {label} ({n_steps} steps)...")
         start_ctrl = data.ctrl[:_N_ARM_ACTUATORS].copy()
         if target_keyframe is not None:
@@ -79,6 +95,8 @@ def main() -> None:
             if target_keyframe is not None:
                 alpha = (step + 1) / n_steps
                 data.ctrl[:_N_ARM_ACTUATORS] = (1.0 - alpha) * start_ctrl + alpha * target_arm
+            if gripper_ctrl is not None:
+                data.ctrl[_N_ARM_ACTUATORS] = gripper_ctrl
             mujoco.mj_step(model, data)
             if step % _FRAME_EVERY_N_STEPS == 0:
                 renderer.update_scene(data, camera=-1)

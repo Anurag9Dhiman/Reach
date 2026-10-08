@@ -35,14 +35,21 @@ from robot_descriptions import panda_mj_description
 
 # World coordinates - red_object and blue_container match MockRobot's defaults
 # exactly so e05/e06/E16's existing (expected, actual) scenarios port over
-# with zero coordinate changes.
-RED_OBJECT_POS = (0.5, 0.2, 0.03)
+# with zero coordinate changes. red_object sits a hair higher than table
+# so its freejoint rests on the floor plane rather than clipping into it.
+RED_OBJECT_POS = (0.5, 0.2, 0.025)
 BLUE_CONTAINER_POS = (-0.3, 0.4, 0.0)
 # Laptop placement differs from Webots (where it was at (1.3, -1.1),
 # unreachable for an arm). Here it sits inside the Panda's ~0.85m reachable
 # half-sphere so the dock-at-laptop keyframe actually looks like the
 # end-effector is attending to it.
 LAPTOP_POS = (0.4, -0.5, 0.03)
+
+# Red cube is small enough to fit the Panda gripper (max opening 8cm,
+# so a 2.5cm cube leaves comfortable clearance on each side) and dense
+# enough that gravity doesn't throw it when the gripper closes abruptly.
+_RED_HALF_SIZE = 0.025
+_RED_FRICTION = (1.5, 0.03, 0.001)  # higher sliding + torsional friction so the grasp holds under acceleration
 
 OBJECT_NAMES = ("red_object", "blue_container", "laptop")
 
@@ -65,6 +72,21 @@ KEYFRAMES: dict[str, list[float]] = {
     "par_near_blue":        [ 2.200,  0.300,  0.000, -1.400,  0.000,  1.700, -0.785, 0.04, 0.04],
     # laptop at (+0.4, -0.5): azimuth ~ atan2(-0.5, 0.4) = -0.90 rad
     "par_docked_at_laptop": [-0.900,  0.200,  0.000, -1.300,  0.000,  1.500, -0.785, 0.04, 0.04],
+
+    # Pick-and-place poses. Solved by full 6-DOF IK: constrains BOTH the
+    # hand position (3D) and its orientation (quaternion, matching the
+    # home-pose "fingertips pointing straight down" orientation), using the
+    # Panda's position + rotation Jacobian with damped least squares.
+    # Earlier revisions only constrained position - that solved pose but
+    # the gripper came out tilted, so closing pushed the cube sideways
+    # instead of pinching it. With the orientation constrained, both
+    # fingertips land at the same Z (dz=0mm) and the grasp holds.
+    "par_above_red":        [+0.190, +0.150, +0.191, -2.245, -0.041, +2.392, -0.377, 0.04, 0.04],
+    "par_hover_red":        [+0.248, +0.506, +0.116, -2.239, -0.143, +2.739, -0.305, 0.04, 0.04],
+    "par_grasp_red":        [+0.265, +0.583, +0.095, -2.216, -0.153, +2.793, -0.296, 0.04, 0.04],
+    "par_above_blue":       [+0.516, -1.375, +1.456, -2.269, +1.348, +1.609, +0.597, 0.04, 0.04],
+    "par_hover_blue":       [+0.461, -1.357, +1.770, -2.273, +1.532, +1.859, +0.571, 0.04, 0.04],
+    "par_release_blue":     [+0.422, -1.377, +1.863, -2.243, +1.597, +1.919, +0.560, 0.04, 0.04],
 }
 
 # End-effector link name in the Panda MJCF, needed for the bridge to report
@@ -109,15 +131,30 @@ def build_model() -> mujoco.MjModel:
         name="floor", type=mujoco.mjtGeom.mjGEOM_PLANE, size=[0, 0, 0.05], material="groundplane",
     )
 
-    # Props. All non-colliding with the Panda in the home keyframe
-    # (verified visually at scene-authoring time). Static (no freejoint)
-    # since nothing picks them up - the arm's dock-at-laptop is a visible
-    # approach pose, not a grasp.
+    # red_object: freejoint-equipped graspable cube. The Panda's gripper
+    # closes on it and lifts it in the pick-and-place sequence. Non-colliding
+    # with the Panda in the home keyframe. Mass + friction tuned so grasp
+    # holds under lift acceleration without the cube squirting out.
     red = worldbody.add_body(name="red_object", pos=list(RED_OBJECT_POS))
-    red.add_geom(type=mujoco.mjtGeom.mjGEOM_BOX, size=[0.03, 0.03, 0.03], rgba=[0.8, 0.1, 0.1, 1.0])
+    red.add_freejoint()
+    red.add_geom(
+        type=mujoco.mjtGeom.mjGEOM_BOX,
+        size=[_RED_HALF_SIZE, _RED_HALF_SIZE, _RED_HALF_SIZE],
+        rgba=[0.8, 0.1, 0.1, 1.0],
+        friction=list(_RED_FRICTION),
+        density=400,  # light enough for the gripper's 100N forcerange to hold reliably
+    )
 
+    # blue_container: shallow open bowl built from a floor + 4 thin walls, so
+    # the red cube can actually be DROPPED INTO it rather than placed on top.
+    # Internal footprint ~10cm x 10cm, walls 4cm tall.
     blue = worldbody.add_body(name="blue_container", pos=list(BLUE_CONTAINER_POS))
-    blue.add_geom(type=mujoco.mjtGeom.mjGEOM_CYLINDER, size=[0.05, 0.04], rgba=[0.1, 0.2, 0.8, 1.0])
+    _blue_color = [0.1, 0.2, 0.8, 1.0]
+    blue.add_geom(type=mujoco.mjtGeom.mjGEOM_BOX, size=[0.055, 0.055, 0.004], pos=[0, 0, 0.004], rgba=_blue_color)
+    blue.add_geom(type=mujoco.mjtGeom.mjGEOM_BOX, size=[0.055, 0.004, 0.025], pos=[0, 0.055, 0.025], rgba=_blue_color)
+    blue.add_geom(type=mujoco.mjtGeom.mjGEOM_BOX, size=[0.055, 0.004, 0.025], pos=[0, -0.055, 0.025], rgba=_blue_color)
+    blue.add_geom(type=mujoco.mjtGeom.mjGEOM_BOX, size=[0.004, 0.055, 0.025], pos=[0.055, 0, 0.025], rgba=_blue_color)
+    blue.add_geom(type=mujoco.mjtGeom.mjGEOM_BOX, size=[0.004, 0.055, 0.025], pos=[-0.055, 0, 0.025], rgba=_blue_color)
 
     laptop = worldbody.add_body(name="laptop", pos=list(LAPTOP_POS))
     # Laptop base

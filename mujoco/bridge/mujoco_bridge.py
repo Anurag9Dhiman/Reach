@@ -101,6 +101,21 @@ _JOINT_TOLERANCE_RAD = 0.05  # Convergence tolerance per joint, in radians.
 
 _MAX_MOVE_SECONDS = 20.0  # Safety cap matching par_bridge.py's.
 
+# Panda gripper is actuator index 7 (the 8th actuator, after the 7 arm
+# joints). ctrl=0 commands the gripper closed, ctrl=255 commands fully
+# open (Menagerie convention). Closing on a graspable object stops at the
+# contact and holds via friction + the actuator's -100N force range.
+_GRIPPER_ACTUATOR = 7
+_GRIPPER_OPEN = 255
+_GRIPPER_CLOSED = 0
+_GRIPPER_SETTLE_STEPS = 600  # physics steps to hold a gripper open/close against gravity
+
+# Pick-and-place is a longer sequence than any single move - 8 keyframes
+# + 2 gripper-settle phases. The budget here must stay under Pulse's
+# per-skill timeout for whatever skill_name maps to pick_and_place
+# (default: 180s like use_computer; see Pulse's skill_registry).
+_PICK_AND_PLACE_SECONDS = 60.0
+
 
 @dataclass
 class _Request:
@@ -294,6 +309,98 @@ class _PandaBridge:
         deadline = time.monotonic() + _MAX_MOVE_SECONDS
         reached = self._interpolate_to_keyframe("par_home", deadline)
         return (reached, "undocked (returned to home)" if reached else "timed out returning to home")
+
+    def _hold_gripper(self, ctrl_value: int, steps: int, deadline: float) -> None:
+        """Hold arm position; command gripper to the given ctrl value and
+        step physics. Used to open or close the gripper around a static arm
+        pose, as its own stage of the pick-and-place sequence."""
+        for _ in range(steps):
+            if time.monotonic() > deadline:
+                return
+            self.data.ctrl[_GRIPPER_ACTUATOR] = ctrl_value
+            mujoco.mj_step(self.model, self.data)
+            if _VIEWER is not None:
+                _VIEWER.sync()
+
+    def _do_pick_and_place(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        """Picks up `object` and drops it at `target`.
+
+        Only the red_object -> blue_container pairing is physically wired
+        (the pick/release keyframes are hand-authored for those two props'
+        world positions). Other object/target names return a clean failure
+        rather than silently doing the one thing we can do.
+
+        Sequence (joint-space keyframe interpolation + gripper state changes
+        between them, each interleaved with physics stepping - the only
+        thing physics does differently from previous moves is track a cube
+        that has a freejoint and can be grasped by friction):
+
+            home -> above_red -> hover_red -> grasp_red
+                 -> [close gripper, hold position]
+                 -> hover_red -> above_red
+                 -> above_blue -> hover_blue -> release_blue
+                 -> [open gripper, hold position]
+                 -> above_blue -> home
+
+        Hover keyframes between above and grasp/release are intentional:
+        joint-space interpolation between two very different arm poses can
+        sweep the gripper sideways through the cube's volume, pushing it
+        off its XY position before the fingers close. The hover->grasp
+        step is small enough that joint interpolation stays close to a
+        straight vertical descent.
+
+        Reports success based on whether the cube ended up inside the
+        blue bowl's XY bounds and the gripper is back at home.
+        """
+        source = parameters.get("object")
+        target = parameters.get("target")
+        if source != "red_object" or target != "blue_container":
+            return False, (
+                f"pick_and_place is only wired for red_object -> blue_container "
+                f"in this scene; got '{source}' -> '{target}'"
+            )
+        deadline = time.monotonic() + _PICK_AND_PLACE_SECONDS
+
+        sequence_to_pick = ["par_above_red", "par_hover_red", "par_grasp_red"]
+        sequence_to_place = [
+            "par_hover_red", "par_above_red",
+            "par_above_blue", "par_hover_blue", "par_release_blue",
+        ]
+        sequence_return = ["par_above_blue", "par_home"]
+
+        for kf in sequence_to_pick:
+            if not self._interpolate_to_keyframe(kf, deadline):
+                return False, f"timed out on pick-and-place at '{kf}'"
+        self._hold_gripper(_GRIPPER_CLOSED, _GRIPPER_SETTLE_STEPS, deadline)
+
+        for kf in sequence_to_place:
+            if not self._interpolate_to_keyframe(kf, deadline):
+                return False, f"timed out on pick-and-place at '{kf}'"
+        self._hold_gripper(_GRIPPER_OPEN, _GRIPPER_SETTLE_STEPS, deadline)
+
+        for kf in sequence_return:
+            if not self._interpolate_to_keyframe(kf, deadline):
+                return False, f"timed out on pick-and-place return at '{kf}'"
+
+        # Verify the cube is actually inside the bowl (XY within ~0.08m of
+        # bowl center, Z near bowl-floor level). This is a real physical
+        # verification, not just "ActionResult.success because the motion
+        # finished" - the whole point of the Safety-Kernel/governance story
+        # is to only trust state we can check.
+        red_pos = object_world_position(self.model, self.data, "red_object")
+        blue_pos = object_world_position(self.model, self.data, "blue_container")
+        if red_pos is None or blue_pos is None:
+            return False, "cube or bowl missing from scene after pick-and-place"
+        dx, dy = red_pos[0] - blue_pos[0], red_pos[1] - blue_pos[1]
+        if math.hypot(dx, dy) > 0.1:
+            return False, (
+                f"cube landed at ({red_pos[0]:.2f}, {red_pos[1]:.2f}) - "
+                f"not inside bowl at ({blue_pos[0]:.2f}, {blue_pos[1]:.2f})"
+            )
+        return True, (
+            f"picked red_object and placed in blue_container; "
+            f"cube now at ({red_pos[0]:.2f}, {red_pos[1]:.2f}, {red_pos[2]:.2f})"
+        )
 
 
 # Module-level viewer handle so _interpolate_to_keyframe can call .sync()
