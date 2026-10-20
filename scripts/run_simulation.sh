@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-# Brings up the whole Reach simulation with one command: Webots (physical
-# robot + computer_arm kiosk), par_bridge.py (the e-puck's extern
-# controller), computer_arm_bridge.py (the kiosk gantry's extern
-# controller - Webots won't step at all until both are connected, not just
-# one), and CollectiveOS (the real computer-use agent, for the
-# CollectiveOSBridge path rather than the physically-real gantry path).
-# Previously this was four-plus manually-run terminals with hand-set env
-# vars - this script is that, scripted and made idempotent, not a new
-# capability.
+# Brings up the whole Reach simulation with one command: the MuJoCo bridge
+# (Franka Panda arm in a scripted arena) and CollectiveOS (the real
+# computer-use agent). Replaces the earlier Webots+par_bridge+computer_arm
+# three-process launcher - MuJoCo is a library (not an application), so the
+# bridge is one Python process that owns the physics model, the viewer,
+# and the WebSocket server all in one.
 #
 # What it does NOT do: grant macOS permissions. Screen Recording (for
 # CollectiveOS to see your screen) and Accessibility (for its UI-inspection
@@ -17,7 +14,9 @@
 #
 # Usage:
 #   ./scripts/run_simulation.sh              # start everything, leave running
-#   ./scripts/run_simulation.sh --demo       # also run examples/webots_loop.py
+#   ./scripts/run_simulation.sh --demo       # also run examples/mujoco_loop.py
+#   ./scripts/run_simulation.sh --headless   # bridge without the viewer window
+#                                            # (CI / unit tests; no `mjpython` needed)
 #   ./scripts/run_simulation.sh --stop       # stop everything this script started
 set -euo pipefail
 
@@ -25,22 +24,27 @@ REACH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STATE_DIR="$REACH_ROOT/.sim_state"
 mkdir -p "$STATE_DIR"
 
-WEBOTS_APP="${WEBOTS_APP:-/Applications/Webots.app}"
 COS_PORT="${COS_PORT:-8000}"
-BRIDGE_PORT="${BRIDGE_PORT:-6001}"
+MUJOCO_PORT="${MUJOCO_PORT:-6003}"
 
 log() { printf '[run_simulation] %s\n' "$1"; }
 die() { printf '[run_simulation] ERROR: %s\n' "$1" >&2; exit 1; }
 
+# Parse flags
+HEADLESS=0
+DEMO=0
+STOP=0
+for arg in "$@"; do
+    case "$arg" in
+        --headless) HEADLESS=1 ;;
+        --demo) DEMO=1 ;;
+        --stop) STOP=1 ;;
+    esac
+done
+
 # -- stop mode --------------------------------------------------------------
-if [[ "${1:-}" == "--stop" ]]; then
-    # SIGKILL, not SIGTERM: Webots does not exit promptly on SIGTERM in this
-    # environment, and - more importantly - a graceful exit makes it re-save
-    # par_arena.wbt with whatever transient runtime state it's in (the
-    # robot's live position, camera pan from manual navigation, internal
-    # joint state), clobbering the authored default arena. SIGKILL can't be
-    # caught, so no such save ever happens.
-    for name in webots par_bridge computer_arm_bridge collectiveos; do
+if [[ "$STOP" == 1 ]]; then
+    for name in mujoco_bridge collectiveos; do
         pidfile="$STATE_DIR/$name.pid"
         if [[ -f "$pidfile" ]]; then
             pid="$(cat "$pidfile")"
@@ -51,19 +55,13 @@ if [[ "${1:-}" == "--stop" ]]; then
             rm -f "$pidfile"
         fi
     done
-    # par_bridge and CollectiveOS's own child processes (uvicorn's reload
-    # workers, if any) don't always share the captured pid - belt-and-braces
-    # cleanup by pattern, scoped tightly enough not to catch unrelated work.
-    pkill -9 -f "MacOS/webots.*par_arena.wbt" 2>/dev/null || true
-    pkill -9 -f "par_bridge/par_bridge.py" 2>/dev/null || true
-    pkill -9 -f "computer_arm_bridge/computer_arm_bridge.py" 2>/dev/null || true
+    # Belt-and-braces by pattern, scoped tightly enough not to catch unrelated work.
+    pkill -9 -f "mujoco/bridge/mujoco_bridge.py" 2>/dev/null || true
     pkill -9 -f "uvicorn src.api:app --port $COS_PORT" 2>/dev/null || true
-    rm -f "$STATE_DIR/webots.port"
     exit 0
 fi
 
 # -- preflight ---------------------------------------------------------------
-[[ -d "$WEBOTS_APP" ]] || die "Webots not found at $WEBOTS_APP (install it, or set WEBOTS_APP). See webots/README.md."
 [[ -f "$REACH_ROOT/CollectiveOS/.env" ]] || die "CollectiveOS/.env not found - needed for GEMINI_API_KEY/API_TOKEN."
 
 API_TOKEN="$(grep '^API_TOKEN=' "$REACH_ROOT/CollectiveOS/.env" | cut -d= -f2)"
@@ -76,9 +74,9 @@ fi
 # -- venvs (created once, reused after) --------------------------------------
 PULSE_VENV="$REACH_ROOT/Pulse/.venv"
 if [[ ! -d "$PULSE_VENV" ]]; then
-    log "creating Pulse venv (first run only)..."
+    log "creating Pulse venv (first run only, installs mujoco + Menagerie, takes ~2 min first time only)..."
     python3 -m venv "$PULSE_VENV"
-    "$PULSE_VENV/bin/pip" install -q -e "$REACH_ROOT/Pulse[dev,webots]"
+    "$PULSE_VENV/bin/pip" install -q -e "$REACH_ROOT/Pulse[dev,mujoco]"
 fi
 
 COS_VENV="$REACH_ROOT/CollectiveOS/.venv"
@@ -88,61 +86,29 @@ if [[ ! -d "$COS_VENV" ]]; then
     "$COS_VENV/bin/pip" install -q -r "$REACH_ROOT/CollectiveOS/requirements.txt"
 fi
 
-export WEBOTS_HOME="$WEBOTS_APP"
-export PYTHONPATH="$WEBOTS_HOME/Contents/lib/controller/python:${PYTHONPATH:-}"
-
-# -- 1. Webots ----------------------------------------------------------------
-if [[ -f "$STATE_DIR/webots.pid" ]] && kill -0 "$(cat "$STATE_DIR/webots.pid")" 2>/dev/null; then
-    log "Webots already running (pid $(cat "$STATE_DIR/webots.pid"))"
-    WEBOTS_PORT="$(cat "$STATE_DIR/webots.port")"
+# -- 1. MuJoCo bridge --------------------------------------------------------
+# Single process (physics loop + WS server + viewer). On macOS the
+# interactive viewer requires `mjpython`, not plain `python`; headless mode
+# works with either. We default to interactive; pass --headless to skip the
+# window.
+if [[ -f "$STATE_DIR/mujoco_bridge.pid" ]] && kill -0 "$(cat "$STATE_DIR/mujoco_bridge.pid")" 2>/dev/null; then
+    log "mujoco_bridge already running (pid $(cat "$STATE_DIR/mujoco_bridge.pid"))"
 else
-    # NOT the Webots default (1234): a Webots instance's <extern>
-    # connection-slot state can accumulate across many relaunches on the
-    # SAME port within one working session, eventually causing silent
-    # connection failures or a phantom "ambiguous extern controller" name
-    # list from long-closed sessions (found the hard way - see
-    # webots/README.md's "reused port gotcha"). A fresh port each time this
-    # actually starts Webots avoids ever colliding with that accumulated
-    # state, rather than just reducing how often it happens - persisted to
-    # webots.port so idempotent re-runs against an already-running instance
-    # reuse the same port instead of re-randomizing.
-    WEBOTS_PORT="$((20000 + RANDOM % 20000))"
-    echo "$WEBOTS_PORT" > "$STATE_DIR/webots.port"
-    log "starting Webots on port $WEBOTS_PORT..."
-    nohup "$WEBOTS_APP/Contents/MacOS/webots" --port="$WEBOTS_PORT" --mode=realtime --stdout --stderr \
-        "$REACH_ROOT/webots/worlds/par_arena.wbt" > "$STATE_DIR/webots.log" 2>&1 &
-    echo $! > "$STATE_DIR/webots.pid"
-    sleep 6
-    if grep -q "^ERROR" "$STATE_DIR/webots.log" 2>/dev/null; then
-        log "Webots reported errors - check $STATE_DIR/webots.log"
+    if [[ "$HEADLESS" == 1 ]]; then
+        log "starting mujoco_bridge.py (headless, no viewer window)..."
+        nohup "$PULSE_VENV/bin/python3" \
+            "$REACH_ROOT/mujoco/bridge/mujoco_bridge.py" --headless \
+            > "$STATE_DIR/mujoco_bridge.log" 2>&1 &
+    else
+        log "starting mujoco_bridge.py (interactive viewer via mjpython)..."
+        nohup "$PULSE_VENV/bin/mjpython" \
+            "$REACH_ROOT/mujoco/bridge/mujoco_bridge.py" \
+            > "$STATE_DIR/mujoco_bridge.log" 2>&1 &
     fi
+    echo $! > "$STATE_DIR/mujoco_bridge.pid"
 fi
 
-# -- 2. par_bridge.py -----------------------------------------------------------
-# Webots holds the ENTIRE simulation paused at t=0 until every
-# extern-controller robot has connected, not just the one being tested - so
-# both this and computer_arm_bridge.py (step 2b) must be running before
-# anything moves, even if you only care about testing one of them.
-if [[ -f "$STATE_DIR/par_bridge.pid" ]] && kill -0 "$(cat "$STATE_DIR/par_bridge.pid")" 2>/dev/null; then
-    log "par_bridge already running (pid $(cat "$STATE_DIR/par_bridge.pid"))"
-else
-    log "starting par_bridge.py on port $WEBOTS_PORT (waits for Webots' simulation to be running)..."
-    WEBOTS_CONTROLLER_URL="ipc://$WEBOTS_PORT/epuck" nohup "$PULSE_VENV/bin/python3" \
-        "$REACH_ROOT/webots/controllers/par_bridge/par_bridge.py" > "$STATE_DIR/par_bridge.log" 2>&1 &
-    echo $! > "$STATE_DIR/par_bridge.pid"
-fi
-
-# -- 2b. computer_arm_bridge.py ---------------------------------------------
-if [[ -f "$STATE_DIR/computer_arm_bridge.pid" ]] && kill -0 "$(cat "$STATE_DIR/computer_arm_bridge.pid")" 2>/dev/null; then
-    log "computer_arm_bridge already running (pid $(cat "$STATE_DIR/computer_arm_bridge.pid"))"
-else
-    log "starting computer_arm_bridge.py on port $WEBOTS_PORT..."
-    WEBOTS_CONTROLLER_URL="ipc://$WEBOTS_PORT/computer_arm" nohup "$PULSE_VENV/bin/python3" \
-        "$REACH_ROOT/webots/controllers/computer_arm_bridge/computer_arm_bridge.py" > "$STATE_DIR/computer_arm_bridge.log" 2>&1 &
-    echo $! > "$STATE_DIR/computer_arm_bridge.pid"
-fi
-
-# -- 3. CollectiveOS ------------------------------------------------------------
+# -- 2. CollectiveOS ---------------------------------------------------------
 if [[ -f "$STATE_DIR/collectiveos.pid" ]] && kill -0 "$(cat "$STATE_DIR/collectiveos.pid")" 2>/dev/null; then
     log "CollectiveOS already running (pid $(cat "$STATE_DIR/collectiveos.pid"))"
 else
@@ -157,34 +123,32 @@ else
     popd >/dev/null
 fi
 
-log "waiting for both bridges (ws://localhost:$BRIDGE_PORT, ws://localhost:6002) and CollectiveOS (http://localhost:$COS_PORT)..."
+log "waiting for mujoco_bridge (ws://localhost:$MUJOCO_PORT) and CollectiveOS (http://localhost:$COS_PORT)..."
+bridge_up=0; cos_up=0
 for i in $(seq 1 30); do
-    bridge_up=0; arm_up=0; cos_up=0
-    grep -q "listening on ws" "$STATE_DIR/par_bridge.log" 2>/dev/null && bridge_up=1
-    grep -q "listening on ws" "$STATE_DIR/computer_arm_bridge.log" 2>/dev/null && arm_up=1
+    bridge_up=0; cos_up=0
+    grep -q "listening on ws" "$STATE_DIR/mujoco_bridge.log" 2>/dev/null && bridge_up=1
     curl -s -o /dev/null "http://localhost:$COS_PORT/" 2>/dev/null && cos_up=1
-    [[ "$bridge_up" == 1 && "$arm_up" == 1 && "$cos_up" == 1 ]] && break
+    [[ "$bridge_up" == 1 && "$cos_up" == 1 ]] && break
     sleep 2
 done
 
-if [[ "$bridge_up" != 1 || "$arm_up" != 1 ]]; then
-    log "not both extern controllers are listening yet - Webots holds the whole simulation paused until BOTH connect, not just one. Check $STATE_DIR/par_bridge.log, $STATE_DIR/computer_arm_bridge.log and $STATE_DIR/webots.log."
-fi
-if [[ "$cos_up" != 1 ]]; then
-    log "CollectiveOS isn't responding yet. Check $STATE_DIR/collectiveos.log."
-fi
-[[ "$bridge_up" == 1 && "$arm_up" == 1 && "$cos_up" == 1 ]] && log "all up. Robot can move (par_bridge), press computer_arm's buttons for real (computer_arm_bridge), and delegate to the real screen (CollectiveOS)."
+[[ "$bridge_up" != 1 ]] && log "mujoco_bridge isn't listening yet. Check $STATE_DIR/mujoco_bridge.log."
+[[ "$cos_up" != 1 ]] && log "CollectiveOS isn't responding yet. Check $STATE_DIR/collectiveos.log."
+[[ "$bridge_up" == 1 && "$cos_up" == 1 ]] && log "all up. The Franka Panda arm can move, exercise the Safety Kernel's collision check against real detected-object positions, and delegate to CollectiveOS."
 
 echo
-log "Webots window is open on your screen - the e-puck robot and the arena (including the 'computer_arm' kiosk) are there to look at directly."
-log "Logs: $STATE_DIR/{webots,par_bridge,computer_arm_bridge,collectiveos}.log"
+if [[ "$HEADLESS" == 0 ]]; then
+    log "MuJoCo viewer window is open on your screen - the Panda arm and the arena (red_object, blue_container, laptop) are there to look at directly."
+fi
+log "Logs: $STATE_DIR/{mujoco_bridge,collectiveos}.log"
 log "Stop everything with: ./scripts/run_simulation.sh --stop"
-log "Run examples/simulated_arm_loop.py instead of --demo for the physically-real gantry path (PAR_COMPUTER_USE_MODE=simulated_arm) - see webots/README.md."
 
-# -- optional demo run --------------------------------------------------------
-if [[ "${1:-}" == "--demo" ]]; then
-    log "running examples/webots_loop.py (drives the arena, then delegates a real use_computer task)..."
+# -- optional demo run -------------------------------------------------------
+if [[ "$DEMO" == 1 ]]; then
+    log "running examples/mujoco_loop.py (drives the arena, then delegates a real use_computer task)..."
+    export MUJOCO_BRIDGE_URL="ws://localhost:$MUJOCO_PORT"
     export COLLECTIVEOS_WS_URL="ws://localhost:$COS_PORT/robot/ws"
     export COLLECTIVEOS_API_TOKEN="$API_TOKEN"
-    (cd "$REACH_ROOT/Pulse" && "$PULSE_VENV/bin/python3" examples/webots_loop.py)
+    (cd "$REACH_ROOT/Pulse" && "$PULSE_VENV/bin/python3" examples/mujoco_loop.py)
 fi

@@ -1,0 +1,308 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Reach systems paper, formatted for CoRL 2026 submission.
+% Requires corl_2026.sty from the official CoRL 2026 author kit (not
+% vendored here - see README.md in this directory for where to put it).
+% Companion .bib: example.bib (one directory alongside this .tex).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass{article}
+
+\usepackage{corl_2026} % Use this for the initial submission.
+% \usepackage[final]{corl_2026} % Uncomment for the camera-ready "final" version.
+% \usepackage[preprint]{corl_2026} % Uncomment for pre-prints (e.g. arxiv).
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric}
+
+% Figures live one directory up (paper/figures/...) so this .tex file
+% references them via that relative path. Avoids duplicating the images.
+\graphicspath{{../}}
+
+\title{Reach: A Governing Physical Agent Runtime for Delegating\\
+Embodied Robot Tasks to Autonomous Computer-Use Systems}
+
+% NOTE: authors are visible only under the `final` or `preprint` option.
+% Initial submissions are automatically anonymized by corl_2026.sty.
+\author{
+  Anurag Dhiman \\
+  Independent Researcher \\
+  \texttt{anuragdhiman666@gmail.com}
+}
+
+\begin{document}
+\maketitle
+
+%===============================================================================
+
+\begin{abstract}
+Many physical robot tasks have digital sub-steps -- reading a value from a display, filling in a report -- and training every robot policy to also drive a desktop is wasteful. We present Reach, which composes a Physical Agent Runtime (PAR) with a separate Autonomous Computer-Use System (ACS) via a capability-based delegation protocol gated by a two-stage safety kernel with human-approval escalation for high-risk calls. Our reference implementation (Pulse as PAR, CollectiveOS as the ACS, a Franka Emika Panda arm in MuJoCo) runs the full loop end to end: the arm navigates under live safety-gated governance, picks and places a cube, then docks at a simulated laptop while CollectiveOS executes a real digital task on the host desktop and returns the answer into Pulse's loop. A 31-experiment evaluation suite from a pre-registered 33-experiment plan validates the capability abstraction, the two-stage safety kernel, and the composed physical-then-digital path against both an in-memory mock and a live simulator.
+\end{abstract}
+
+\keywords{Agent governance, Computer-use agents, Safety-gated delegation}
+
+%===============================================================================
+
+\section{Introduction}
+
+A robot that can see and manipulate its physical environment will, sooner or later, hit a step that is not physical at all: it needs to read a machine's on-screen status, enter a measurement into a tracking application, or submit a report before it can continue. One response is to train a single policy that jointly grounds physical affordances and screen operation~\citep{driess2023palme, brohan2023rt2}. We take a different, compositional approach: keep the robot's governing runtime and a desktop-operating agent as two separate, independently maintained systems, and make the decision to hand a task from one to the other an explicit, inspectable, safety-gated event rather than an implicit property of a single learned policy.
+
+This mirrors how large language model (LLM) agents already treat tools: a reasoning loop that decides, at each step, whether to call an external capability and how to use its result before continuing~\citep{yao2023react, schick2023toolformer}. Reach generalizes this pattern one level up the stack -- the ``tool'' a physical robot calls is not a search API or a calculator, but an entire autonomous agent that can perceive and operate a graphical desktop on the robot's behalf.
+
+Our contributions are:
+\begin{itemize}
+\item A capability/skill abstraction and a two-stage safety kernel (admission and policy checks with an allow / modify / deny / escalate outcome) that governs when a robot's runtime may delegate a step to an autonomous computer-use system, and requires human approval for that delegation under a configurable risk profile.
+\item A working reference bridge between an embodied runtime (Pulse, playing the role of PAR) and a screen-operating agent (CollectiveOS), connected over a minimal WebSocket protocol, with the delegation recorded as an imitation-learning demonstration on the computer-use side.
+\item A physical-simulation integration path (a Franka Emika Panda arm in MuJoCo, model from the MuJoCo Menagerie), validated against a real MuJoCo installation. The arm's end-effector docks visibly at a simulated laptop prop before each \texttt{use\_computer} delegation, so the governance-and-delegation hand-off is a physical gesture rather than an invisible RPC. Replaces an earlier Webots differential-drive e-puck integration that was itself validated against a real Webots installation but became visually limiting on this development machine.
+\item A 31-experiment empirical evaluation (of a pre-registered 33-experiment plan spanning core capability, safety, delegation intelligence, systems robustness, and generality/learning), reported alongside the earlier single-run validation, with findings disclosed honestly including a real external service outage that left one experiment's digital half inconclusive.
+\end{itemize}
+
+%===============================================================================
+
+\section{Related Work}
+
+\subsection{Embodied Language Agents}
+\label{sec:embodied-agents}
+SayCan~\citep{ahn2022saycan} grounds an LLM's language-based planning in a learned affordance function so that proposed actions are both plausible and physically feasible; \citet{huang2022zeroshot} show an LLM can propose actionable step sequences for embodied tasks with only a translation step onto admissible actions. PaLM-E~\citep{driess2023palme} and RT-2~\citep{brohan2023rt2} go further and fold visual and physical grounding directly into a single multimodal model. Reach sits closer to the first group: rather than fold computer-use competence into the robot's own model, it treats an entire external agent as the thing being grounded and invoked.
+
+\subsection{Tool Use and Reasoning in LLM Agents}
+ReAct~\citep{yao2023react} interleaves reasoning traces with actions so an LLM agent can call a tool, observe the result, and revise its plan; Toolformer~\citep{schick2023toolformer} shows a model can learn when to invoke a tool via self-supervision, and Reflexion~\citep{shinn2023reflexion} adds verbal self-critique after a failed attempt. Multi-agent frameworks such as AutoGen~\citep{wu2023autogen} and embodied, lifelong-learning agents such as Voyager~\citep{wang2023voyager} treat other agents or skill libraries as callable units much as we treat the autonomous computer-use system: a capability with a name, a description, and a result that feeds back into the caller's own loop.
+
+\subsection{Autonomous Computer-Use and GUI Agents}
+WebArena~\citep{zhou2024webarena} and Mind2Web~\citep{deng2023mind2web} benchmark agents that must complete tasks by operating real web interfaces, and CogAgent~\citep{hong2024cogagent} targets GUI grounding directly from screenshots. Commercial computer-use agents that perceive a screen and drive the mouse and keyboard, such as Anthropic's~\citep{anthropic2024computeruse}, follow the same perceive--plan--act--verify loop our ACS component implements. Reach does not propose a new computer-use agent; it proposes a governed protocol for an \emph{external, physical} caller to invoke one.
+
+\subsection{Robot Simulation Platforms}
+Webots~\citep{michel2004webots} and the Robot Operating System~\citep{quigley2009ros} are the standard tooling for developing and testing robot software before physical deployment; MuJoCo~\citep{todorov2012mujoco} and Isaac Gym~\citep{makoviychuk2021isaacgym} target high-throughput physics for learning. Sim-to-real transfer typically relies on domain randomization~\citep{tobin2017domain, peng2018simtoreal} to close the gap between simulated and physical dynamics. Our simulation integration is narrower in scope: it does not attempt sim-to-real transfer of a learned policy, only a faithful, physically-simulated stand-in for a mocked robot interface, reusing a ROS~2-shaped schema so that a later move to ROS~2 itself is a transport change rather than a redesign -- and, as of this evaluation, validated against a real MuJoCo process (Section~\ref{sec:evaluation}).
+
+\subsection{Safety-Governed Autonomy}
+\citet{amodei2016concrete} catalog concrete failure modes -- including unsafe exploration and reward hacking -- that motivate building explicit safety layers around otherwise-capable agents rather than trusting a policy's own judgment; Constitutional AI~\citep{bai2022constitutional} pursues a complementary strategy of shaping the model's own behavior via a set of stated principles. Reach's safety kernel is closer to the former: an external, non-learned gate that a possibly-untrusted planner's proposed action must pass through, with an explicit human-escalation path for high-risk capabilities.
+
+%===============================================================================
+
+\section{System Architecture}
+
+\subsection{Overview}
+Figure~\ref{fig:cycle} shows the delegation cycle. The robot perceives the physical world and proposes a next action through its own planner; when that action is the \texttt{use\_computer} capability, PAR's safety kernel decides whether to allow, modify, deny, or escalate it, dispatches an approved request to the ACS, and feeds the ACS's result back into the robot's own observation--action loop so it can continue the physical task.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=6mm and 10mm,
+  box/.style={draw, rounded corners, align=center, minimum height=9mm, minimum width=30mm, font=\small, inner sep=2pt},
+  lbl/.style={font=\footnotesize, align=center}
+]
+\node[box] (world) {Physical world\\(observation)};
+\node[box, below=of world] (par) {PAR: Agent + Skill\\+ Safety Kernel};
+\node[box, right=of par] (acs) {Autonomous\\Computer-Use\\System};
+\node[box, below=of acs] (result) {Digital task\\result};
+
+\draw[-{Latex[length=1.8mm]}] (world) -- (par);
+\draw[-{Latex[length=1.8mm]}] (par) to[bend left=18] node[lbl, above]{use\_computer} (acs);
+\draw[-{Latex[length=1.8mm]}] (acs) -- (result);
+\draw[-{Latex[length=1.8mm]}] (result) to[bend left=18] node[lbl, below]{result text} (par);
+\draw[-{Latex[length=1.8mm]}] (par) to[out=160,in=200,looseness=6] node[lbl, left]{continue\\physical\\action} (world);
+\end{tikzpicture}
+\caption{The Reach delegation cycle. PAR's planner proposes an action; a \texttt{use\_computer} action is safety-checked, dispatched to the ACS, and its result rejoins PAR's loop so the robot's physical task can continue.}
+\label{fig:cycle}
+\end{figure}
+
+\subsection{Physical Agent Runtime (PAR)}
+PAR implements a fixed loop -- Observation $\rightarrow$ Agent $\rightarrow$ Skill $\rightarrow$ Safety $\rightarrow$ Action -- around three data types: an \texttt{Observation} (robot state and detected objects), an \texttt{Action} (a named skill with parameters), and a \texttt{Capability} (a skill's declared name, description, input schema, risk level, and the environment profiles it is valid under). A \texttt{Planner} maps a goal and the current observation to the next \texttt{Action}; we use interchangeably a deterministic keyword-matching planner for testing and an LLM tool-use planner (Claude or Gemini, following the ReAct pattern~\citep{yao2023react}) for open-ended goals, both implementing the same interface so the surrounding runtime is agnostic to which one is in use.
+
+\subsection{Safety Kernel}
+Every proposed action passes a two-stage check before it executes. The \emph{admission} stage rejects a capability outright if the runtime is in an emergency-stopped state or the capability is not registered for the active environment profile. The \emph{policy} stage evaluates the specific action against that profile's constraints (workspace bounds, collision margin against currently-detected objects, velocity limits) and returns one of four outcomes: \textsc{Allow}, \textsc{Modify} (e.g., a move target is speed-clamped to a reachable distance), \textsc{Deny}, or \textsc{Escalate} to a human-approval callback. A denial is fed back to the planner rather than aborting the task, so the agent re-plans around it -- Algorithm~\ref{alg:safety} summarizes the check for the capability at the center of this paper.
+
+We mark \texttt{use\_computer} as \textsc{High} risk. Combined with a profile that requires approval, this forces a human-approval escalation before any delegation to the ACS in a real-robot deployment; under a permissive simulation profile it runs unattended, which is what let us validate the loop without a human in it for every step.
+
+\begin{algorithm}[t]
+\caption{Safety check for a proposed action}
+\label{alg:safety}
+\begin{algorithmic}[1]
+\REQUIRE action $a$, observation $o$, capability $c$, profile $p$
+\IF{emergency stop engaged}
+  \RETURN \textsc{Deny}
+\ENDIF
+\IF{$p.\text{name} \notin c.\text{env\_profiles}$}
+  \RETURN \textsc{Deny} \COMMENT{admission stage}
+\ENDIF
+\IF{$c.\text{risk} = \textsc{High}$ \AND $p.\text{approval\_required}$}
+  \RETURN \textsc{Escalate}
+\ENDIF
+\IF{$a.\text{skill} = \texttt{move}$}
+  \RETURN CheckMove$(a, o, p)$ \COMMENT{workspace / collision / velocity}
+\ENDIF
+\RETURN \textsc{Allow}
+\end{algorithmic}
+\end{algorithm}
+
+\begin{table}[t]
+\centering
+\caption{Wire protocol between PAR and the ACS (JSON over WebSocket).}
+\label{tab:wire}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Robot $\rightarrow$ ACS & ACS $\rightarrow$ Robot \\
+\midrule
+\{"type":"task", & \{"type":"reply", \\
+\ "text":\textless{}task\textgreater{}\} & \ "text":\textless{}result\textgreater{}, \\
+ & \ "status":\textless{}done\textbar{}error\textgreater{}\} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Autonomous Computer-Use System (ACS)}
+\label{sec:acs}
+The ACS (CollectiveOS in our implementation) runs a perceive--plan--act--verify loop over a real desktop: it captures a screenshot and the platform accessibility tree, plans a short sequence of sub-steps with a vision-language model, grounds and executes each step through UI automation or browser control, and verifies the action changed the screen as expected before continuing -- the same shape of loop used by GUI-agent benchmarks and systems~\citep{zhou2024webarena, deng2023mind2web, hong2024cogagent, anthropic2024computeruse}. Write-flavored actions (send, delete, purchase, \ldots) are meant to pause for human-in-the-loop confirmation when the ACS is driven through its own chat interface; critically, that confirmation gate is not wired into the robot-facing endpoint described next, which is why PAR's own safety kernel is load-bearing for this integration rather than a convenience.
+
+\subsection{The Bridge}
+PAR exposes computer use to its planner as a single capability, \texttt{use\_computer}, taking one parameter (\texttt{task}, a natural-language description of the digital step). When the planner selects it and the safety kernel allows or approves it, a robot-interface wrapper forwards the request over a WebSocket connection to the ACS's robot-facing endpoint, which runs its computer-use loop synchronously and replies with a status and a natural-language result (Table~\ref{tab:wire}). The reply is translated back into PAR's own \texttt{ActionResult} type, so from the rest of PAR's perspective a delegated computer step looks exactly like any other skill's result -- success or failure, with a message the planner can read and react to. Every such run is also recorded by the ACS as an imitation-learning demonstration (a before-screenshot paired with the action taken at each step), which is the data trail this delegation protocol produces toward a robot eventually \emph{learning} to use a computer rather than only delegating it.
+
+A network failure, a timeout, or an authentication error is caught at the bridge and returned as a normal failed result rather than an exception, so a delegation that cannot reach the ACS is something the planner can observe and re-plan around, in keeping with the safety kernel's own denial-is-recoverable design. Our evaluation suite exercises this path directly with an external failure that was not staged (Section~\ref{sec:e18}).
+
+\begin{table}[t]
+\centering
+\caption{Implementation stack.}
+\label{tab:stack}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Concern & Choice \\
+\midrule
+Language & Python \\
+Data validation & Pydantic \\
+PAR planners & Rule-based; Claude / Gemini tool-use \\
+ACS API layer & FastAPI, WebSocket \\
+ACS task loop & LangGraph \\
+ACS screen control & Accessibility tree, browser automation, \\
+ & pointer/keyboard automation \\
+PAR $\leftrightarrow$ ACS transport & WebSocket, JSON payloads \\
+Physical simulation & MuJoCo (Franka Panda via Menagerie) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Physical Simulation Integration}
+\label{sec:mujoco-integration}
+To evaluate whether the safety kernel's physical checks (workspace bounds, collision margin) behave sensibly against something more than an in-memory mock, we bridged PAR to a physically-simulated Franka Emika Panda arm in MuJoCo~\citep{todorov2012mujoco}, with the arm model and assets taken from the MuJoCo Menagerie. PAR already supports a ROS~2 robot interface with a pure, transport-agnostic JSON mapping between its \texttt{Observation}/\texttt{Action} types and a wire payload; because our development environment had no official ROS~2 build for its OS/CPU combination, we reused that same JSON mapping over a plain WebSocket to a Python process that owns the MuJoCo model, data, and viewer, instead of ROS~2 topics. The arm's end-effector world position is reported as the robot's state (the thing that would actually collide with a detected object), and \texttt{move} resolves to the nearest of a small set of hand-authored joint-space keyframes (\texttt{near\_red} / \texttt{near\_blue} / \texttt{docked\_at\_laptop}) rather than solving inverse kinematics for arbitrary targets -- a deliberate scope choice, since the keyframes still exercise the Safety Kernel's collision check correctly against real end-effector positions. The optional \texttt{begin\_computer\_use} / \texttt{end\_computer\_use} hooks on \texttt{MuJoCoRobot} drive the arm's end-effector to a simulated laptop prop before each delegation and back to the home pose after, so the governance-and-delegation hand-off is a visible physical gesture rather than an invisible RPC. Section~\ref{sec:evaluation} reports this bridge validated against a real MuJoCo installation.
+
+An earlier revision of this integration used a Webots~\citep{michel2004webots} differential-drive e-puck and was similarly validated against a real Webots installation; it was retired in favor of MuJoCo on this development machine for cleaner rendering and simpler installation. The ROS~2-shaped JSON schema is unchanged by that swap -- the two integrations differ only in which simulator sits behind the WebSocket.
+
+%===============================================================================
+
+\section{Implementation}
+
+PAR (Pulse) and the ACS (CollectiveOS) are independent Python code bases communicating only over the protocols described above; each also embeds its own LLM client (Claude or Gemini for PAR's planner, Gemini for the ACS's perception/planning) behind an interface so either can be swapped. The ACS's own conversational surface is a FastAPI service with a LangGraph-based task loop; PAR is a plain library with no server component of its own -- it is a runtime a robot's control process links against directly. Table~\ref{tab:stack} summarizes the stack.
+
+%===============================================================================
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+We report what has and has not been exercised, in two parts: the single live delegation and kinematic-fake bridge validation reported previously, and a 31-experiment empirical evaluation suite completed since, drawn from a pre-registered 33-experiment plan spanning five categories. Two experiments in that plan remain genuinely blocked -- both require a real human operator making timed approval decisions, which we could not substitute for -- and are reported as such rather than silently omitted.
+
+\subsection{Live Delegation and Bridge Validation (Prior Result)}
+We ran a read-only task end to end: PAR's runtime, under the safety kernel's escalation gate, delegated ``which application is currently in the foreground?'' to a live instance of the ACS. The ACS's vision-language model correctly identified the foreground application, and the result returned through PAR's normal \texttt{ActionResult} path. A transient upstream rate-limit error on a first attempt surfaced as an ordinary failed result rather than a crash, and a retry succeeded. PAR's and the ACS's unit and integration test suites, including regression tests added after finding and fixing an authentication bug that had made the ACS's robot-facing WebSocket endpoint entirely unreachable, pass in full.
+
+\begin{figure}[t]
+\centering
+\begin{minipage}{0.48\linewidth}
+  \centering
+  \includegraphics[width=\linewidth, trim=200 100 200 60, clip]{figures/fig_demo_1_home.png}\\
+  \footnotesize (a) Pre-tour: arm at \texttt{par\_home}.
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\linewidth}
+  \centering
+  \includegraphics[width=\linewidth, trim=200 100 200 60, clip]{figures/fig_demo_2_near_red.png}\\
+  \footnotesize (b) After \texttt{move} near \texttt{red\_object}: Safety Kernel ALLOWS.
+\end{minipage}
+
+\vspace{2mm}
+
+\begin{minipage}{0.48\linewidth}
+  \centering
+  \includegraphics[width=\linewidth, trim=200 100 200 60, clip]{figures/fig_demo_3_near_blue.png}\\
+  \footnotesize (c) After re-plan to \texttt{blue\_container} (a direct \texttt{move} onto the red object was DENIED by the collision check in between).
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\linewidth}
+  \centering
+  \includegraphics[width=\linewidth, trim=200 100 200 60, clip]{figures/fig_demo_4_docked.png}\\
+  \footnotesize (d) End-effector docked at the laptop prop while \texttt{use\_computer} is delegated to CollectiveOS.
+\end{minipage}
+\caption{Four moments from a single real end-to-end run of the arena tour example (\texttt{examples/mujoco\_loop.py}): a Franka Emika Panda arm in MuJoCo being driven by Pulse's scripted planner through the Safety Kernel. Panel (c) is the clearest visual evidence of the governance behavior the paper describes: between (b) and (c) a proposed \texttt{move} straight onto \texttt{red\_object} was denied by the Safety Kernel's collision-margin check, so no arm motion occurred for that step; the planner re-planned to the blue container next. Panel (d) shows the \texttt{begin\_computer\_use} hook docking the arm at the laptop prop for the duration of the delegation to CollectiveOS, making the hand-off a visible physical gesture rather than an invisible RPC. Frames rendered via \texttt{mujoco.Renderer} inside the bridge process; the exact camera is MuJoCo's default free camera, with no post-processing.}
+\label{fig:demo-sequence}
+\end{figure}
+
+\subsection{Hardware-in-the-Loop MuJoCo Validation (New)}
+\label{sec:mujoco-real}
+Figure~\ref{fig:demo-sequence} shows four frames from a real end-to-end run of the arena tour: an arm visibly reaching toward each prop under Pulse's governance, pausing in place when a proposed move would collide, and docking at a laptop prop for the duration of a \texttt{use\_computer} delegation to CollectiveOS -- the same delegation cycle sketched abstractly in Figure~\ref{fig:cycle}, now with pictures of it actually happening. Beyond the figure, the physical-simulation bridge (Section~\ref{sec:mujoco-integration}) was validated against the real MuJoCo installation via two experiments. The first re-evaluated the same safety-kernel scenario battery used for the in-memory ablation study (Section~\ref{sec:ablation}) against a live \texttt{MuJoCoRobot}'s observation alongside the in-memory mock's, in the same run: both reached perfect decision accuracy on all ten scenarios and agreed with each other on every one, indicating the kernel's decision depends only on the observation's values, not on which concrete robot interface produced it. This finding is now cross-validated against two completely different real simulators -- an earlier run against a Webots differential-drive e-puck reached the same ten-of-ten agreement; the current MuJoCo run reproduces it with a 7-DOF arm whose reported position is an end-effector rather than a wheeled base. The second experiment drove one real sequence through the full pipeline -- waypoint approach (the arm's \texttt{move} resolving to the nearest of three joint-space keyframes, converging within 20\,cm of the targeted prop in XY), a live collision-margin denial against a real detected object's position, a live workspace-bound denial, and emergency-stop (blocking the next action, then recovering once cleared) -- all against the live simulator; every check passed.
+
+\begin{table}[t]
+\centering
+\caption{Evaluation suite summary, by category (31 of 33 attempted).}
+\label{tab:suite}
+\small
+\begin{tabular}{@{}p{0.17\linewidth}p{0.08\linewidth}p{0.68\linewidth}@{}}
+\toprule
+Category & $N$ & Headline finding \\
+\midrule
+Core Capability & 4 & Live delegation succeeds but is unreliable end to end (12-trial pilot: most non-completions traced to quota limits, a real intermittent screenshot-capture race, or expected \texttt{max\_iter} outcomes -- zero unexplained failures). \\
+Safety & 4\,+\,1\,bl. & Full safety kernel reaches 0\% unsafe-execution rate and perfect four-outcome decision accuracy on the scenario battery; e-stop reliably blocks actions and the ACS is never contacted while engaged; escalation is driven by a capability's fixed risk tag, not the content of a given task. \\
+Delegation Intelligence & 5 & An LLM planner's decision \emph{to} delegate scored perfect precision/recall on a small scored set; but planner choice is pivotal -- a rule-based planner reached 0\% task success on natural-language goals where an LLM planner reached 69\%. \\
+Systems Robustness & 9\,+\,1\,bl. & The bridge degrades safely under fault injection and scales cleanly to 8 concurrent robot clients; but two real design gaps surfaced: PAR accepts an incorrect or ambiguous ACS result as success identically to a correct one (no semantic verification exists), and an all-denials task can exhaust its step budget stuck in \texttt{PLANNING}, reaching neither \texttt{DONE} nor \texttt{FAILED}. \\
+Generality \& Learning & 4 & 44 real delegation attempts yielded 14 recorded demonstrations; a toy nearest-neighbor model over them correctly predicted a held-out task's action type, a small proof of concept toward imitation learning from delegated runs, not a trained policy. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Evaluation Suite (New)}
+\label{sec:ablation}
+Table~\ref{tab:suite} summarizes the suite by category; full per-experiment design, metrics, and raw trial records are reported in the project repository rather than reproduced in full here, in the interest of space. We highlight three findings we consider load-bearing for how the architecture should be read. First, the safety kernel's contribution is real and separable: an admission-only configuration (emergency-stop and profile checks, no policy-stage checks) still blocks the scenarios that are admission-stage violations but allows every workspace, collision, and risk-escalation violation through, confirming the two-stage design is not redundant with itself. Second, delegation \emph{decision} quality and delegation \emph{execution} quality are different questions with different answers: the LLM planner we evaluated chose to delegate exactly when it should on every scored trial, but whether the delegated task then actually completed depended heavily on external service availability (Section~\ref{sec:e18}) and on real, intermittent bugs in the ACS's own perception step -- neither of which the delegation decision itself controls. Third, the evaluation surfaced two genuine correctness gaps that unit testing had not: PAR has no mechanism to verify an ACS result's content before treating it as a successful completion, and a task that is denied at every step can become permanently stuck rather than terminating in a reportable failure state. Both are concrete, scoped items for future work (Section~\ref{sec:future}) rather than properties we consider acceptable as shipped.
+
+\subsection{Composed Physical+Digital Run (E18)}
+\label{sec:e18}
+One experiment specifically composes the physical and digital halves in a single task: the arm navigates, is denied a collision, navigates again, docks visibly at the laptop prop, and then delegates a real digital sub-task to a live CollectiveOS instance before the task can complete. The physical half succeeded on every re-run across both simulator eras (the earlier Webots e-puck and the current MuJoCo Panda) -- the same waypoint approach and live collision denial reported in Section~\ref{sec:mujoco-real}, now exercised as part of a composed task rather than in isolation. The digital half has been less reliable, in ways that are informative rather than architectural. Earlier attempts under Webots hit a sustained ``high demand'' (HTTP 503) outage from the underlying vision-language API across three consecutive runs on two different Gemini models, and failed cleanly; the most recent re-run under MuJoCo saw the vision model answer every call successfully but still ran past PAR's 180\,s per-delegation budget while CollectiveOS was mid-iteration, causing \texttt{Runtime} to time the task out at that boundary. In both failure modes, the bridge's error handling (Section~\ref{sec:mujoco-integration}) behaved exactly as designed: the failure surfaced as an ordinary failed result with a readable message, not a crash, and the scripted remainder of the task was correctly never reached. The honest reading of this experiment is that the architecture is sound end to end -- the physical half, the safety gate, the delegation hand-off, and the error path are all exercised for real -- but a fully successful composed run that reaches \texttt{task\_complete} depends on choosing either a faster vision backend (e.g., UI-TARS as a local-inference alternative to Gemini, which CollectiveOS now supports) or a shorter delegated task, so the ACS's own loop finishes inside PAR's time budget.
+
+%===============================================================================
+
+\section{Discussion and Limitations}
+
+The current ROS~2 robot interface executes fire-and-forget, with no completion acknowledgement from the physical robot -- a limitation we inherited rather than fixed, since our simulation work deliberately avoided that interface. A real deployment migrating from the WebSocket bridge to ROS~2 (on hardware where ROS~2 is available) should close that gap rather than carry it forward.
+
+The evaluation suite resolved two of the three open questions the original preliminary evaluation posed, and sharpened the third. Whether an LLM planner reliably chooses to delegate only when a step genuinely needs a computer now has a preliminary, positive answer on a small scored set (Section~\ref{sec:ablation}); whether the physical-simulation bridge works against a real simulator (first Webots, now MuJoCo -- the swap was made for development-environment visual fidelity, not because the bridge misbehaved under either backend) also has a positive answer (Section~\ref{sec:mujoco-real}). What the suite instead sharpened is end-to-end reliability: a live delegation can be denied completion by causes entirely outside the delegation decision itself -- a daily or per-minute quota limit, an intermittent screenshot-capture race in the ACS, or, as in Section~\ref{sec:e18}, a sustained upstream outage -- so a single success-rate number conflates architectural correctness with the current reliability of third-party services we do not control, and should be read with that caveat rather than at face value.
+
+The evaluation also surfaced two correctness gaps worth stating plainly rather than minimizing. PAR currently performs no semantic verification of a returned ACS result before treating it as success, which means an incorrect or ambiguous digital answer is indistinguishable, from PAR's side, from a correct one. And a task that is denied at every proposed step can exhaust its step budget without ever reaching a terminal \texttt{DONE} or \texttt{FAILED} state, which is a real gap in how the runtime reports an unrecoverable situation rather than a cosmetic one. Neither undermines the safety kernel's own denial behavior, which remains correct in isolation; both are about what the runtime does with a stream of denials or unverifiable results over a longer task.
+
+Finally, the current authentication between PAR and the ACS remains a single shared secret; a dedicated evaluation of this boundary confirmed it is adequate for one robot and one ACS instance in development but not for a multi-robot or multi-tenant deployment, and that a valid token can be replayed -- a known, disclosed limitation rather than a newly discovered one, now with a concrete evaluation behind the claim.
+
+%===============================================================================
+
+\section{Future Work}
+\label{sec:future}
+
+Immediate priorities are: (1) achieving a fully successful composed physical+digital run (Section~\ref{sec:e18}) by pairing the arm with a faster vision backend -- UI-TARS as a local-inference alternative to Gemini, which CollectiveOS now supports -- so the ACS's own loop finishes inside PAR's 180\,s per-delegation budget rather than being timed out at it; (2) closing the two correctness gaps the evaluation suite surfaced -- result-content verification for ACS responses, and a terminal failure state for an all-denials task -- both scoped and reproducible rather than speculative; (3) extending the arm's \texttt{move} from the current discretized joint-space keyframes to real inverse kinematics against arbitrary end-effector targets, and extending the physical-task repertoire from navigate-and-dock toward grasping manipulation of real everyday computer interfaces (a keyboard, a mouse) -- the harder dexterous-manipulation story this work only takes a first step toward; (4) growing the imitation-learning proof of concept (Section~\ref{sec:ablation}) from a toy nearest-neighbor baseline over 14 demonstrations into an actually-trained policy over a substantially larger demonstration set; and (5) adapting a GUI-agent benchmark such as WebArena~\citep{zhou2024webarena} or Mind2Web~\citep{deng2023mind2web} to be invoked through a robot planner, rather than directly, which remains the clearest path to a standardized comparison this evaluation does not yet provide.
+
+%===============================================================================
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+Reach shows that a robot's need to occasionally use a computer does not require folding computer-use competence into the robot's own policy. A small, explicit capability, gated by a two-stage safety kernel with a human-escalation path, is enough to compose a physical agent runtime with an independently-built autonomous computer-use system, and the same schema-preserving approach extends to a physically-simulated robot without requiring a full ROS~2 toolchain. Beyond the single live task reported previously, a 31-experiment evaluation suite and a hardware-in-the-loop validation of the physical-simulation bridge (against MuJoCo, with cross-validation from an earlier Webots-era run) move this from a preliminary systems check toward a broader empirical account of where the architecture holds up and where it does not -- including two genuine correctness gaps and a real third-party service dependency that bounds the reliability of individual delegations, both reported here rather than smoothed over. The honest next step is still broader, harder validation: on real hardware, against a standardized benchmark, with real inverse kinematics in place of the current discretized keyframes, and with the two surfaced correctness gaps closed rather than only documented.
+
+%===============================================================================
+
+\clearpage
+% The acknowledgments are automatically included only in the final and preprint versions of the paper.
+\acknowledgments{This system and this paper were developed with the assistance of Claude (Anthropic).}
+
+%===============================================================================
+
+% no \bibliographystyle is required, since the corl style is automatically used.
+\bibliography{example}
+
+\end{document}

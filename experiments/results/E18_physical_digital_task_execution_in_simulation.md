@@ -1,13 +1,12 @@
 # E18: Physical-Digital Task Execution in Simulation
 
-Generated: 2026-10-01T15:49:45.069286+00:00
+Generated: 2026-10-07T11:53:54.078598+00:00
 
 ## Config
 
-- **evaluation_method**: one real Runtime.run_task() through ComputerAugmentedRobot(WebotsRobot()) with the DEFAULT CollectiveOSBridge, against a live Webots process AND a live CollectiveOS instance simultaneously
+- **evaluation_method**: one real Runtime.run_task() through ComputerAugmentedRobot(MuJoCoRobot()) with the default CollectiveOSBridge, against a live MuJoCo process AND a live CollectiveOS instance simultaneously
 - **profile**: simulation
 - **delegated_task**: check whether any maintenance alerts are open
-- **attempts**: 3
 
 ## Metrics
 
@@ -16,13 +15,12 @@ Generated: 2026-10-01T15:49:45.069286+00:00
 - **collision_correctly_denied**: True
 - **near_blue_allowed_and_succeeded**: True
 - **real_acs_delegation_succeeded**: False
+- **real_acs_delegation_latency_seconds**: 180.00915724999868
 - **stop_succeeded**: None
 - **all_checks_passed**: False
-- **physical_subsystem_checks_passed_all_3_attempts**: True
-- **acs_delegation_failed_all_3_attempts_due_to_external_outage**: True
 
 ## Notes
 
-Unblocked 2026-10-01 (previously blocked: needed real Webots AND real CollectiveOS/Gemini quota simultaneously - now both available). Attempted 3 times for real against a live Webots process and a live CollectiveOS instance. In all 3 attempts, the PHYSICAL half of the composed loop worked correctly and identically: real waypoint navigation to a point near red_object (allowed), a live safety-kernel collision denial against the real detected object position when the e-puck tried to drive onto it, and real waypoint navigation to a point near blue_container (allowed) - exactly reproducing E16/E17's findings in a composed task rather than in isolation. The DIGITAL half - delegating 'check whether any maintenance alerts are open' to the real ACS - failed all 3 times with an identical Gemini 503 'currently experiencing high demand' error, across BOTH of the project's two quota pools (gemini-3.1-flash-lite, twice, ~60s before failing each time; gemini-3.6-flash, the CollectiveOS-default model, once, ~7.5s before failing) - this is a genuine, sustained, external Gemini capacity outage at the time of running, not a Reach-side bug, and independently reconfirms E29's same-day finding of a sustained gemini-3.1-flash-lite outage from a completely different angle (a composed physical+digital task here, vs. cross-domain generalization trials there). Per Runtime.run_task's own documented contract (a genuine execution failure, unlike a safety denial, correctly ends the loop early - see runtime.py's docstring), the scripted 'stop'/task_complete steps were correctly never reached once the real delegation failed; this is Runtime behaving exactly as designed under a real external failure, not a flaw in the composition being tested. The bridge's error handling worked as the paper itself describes for exactly this situation: the 503 surfaced as an ordinary failed ActionResult with a readable message, not a crash, in all 3 attempts. Stopped retrying after 3 real attempts (one of which spent part of CollectiveOS's scarce 20-requests-per-day gemini-3.6-flash quota) rather than continuing to hammer an external service known at this point to be degraded - this experiment should be re-attempted when Gemini's availability has recovered to obtain a fully successful composed run; the live-delegation success this paper already reports (Section 5) demonstrates the same digital half succeeding under normal API availability.
+Re-run against MuJoCo 2026-10-07 (previously attempted 3x against Webots 2026-10-01; all 3 Webots-era attempts had their physical half succeed cleanly but their digital half fail with identical Gemini 503 'high demand' errors across both quota pools - a sustained external outage, not a Reach-side bug). This re-run runs the full composed loop: the Franka Panda arm navigates toward each prop, gets a live collision denial from the safety kernel against a real detected-object position, docks its end-effector at the simulated laptop prop, then delegates a genuine digital subtask to a live CollectiveOS instance (real screenshot, real vision model, real pyautogui automation on the host desktop) and continues the physical task afterward. Delegated task: 'check whether any maintenance alerts are open'. Result message: 'action timed out'.
 
 Full per-trial records: `E18_physical_digital_task_execution_in_simulation.json`

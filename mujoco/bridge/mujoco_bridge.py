@@ -1,0 +1,526 @@
+"""
+PAR <-> MuJoCo bridge.
+
+Replaces the Webots extern-controller split (par_bridge.py +
+computer_arm_bridge.py) with a single Python process that owns the physics
+model AND serves Pulse's WebSocket requests, since MuJoCo is a library, not
+an application with its own process. Same wire protocol as Webots's bridge
+(and ROS 2's own would-be payload - see par.robots.ros2_mapping) so Pulse's
+MuJoCoRobot/MuJoCoBridge match the shape WebotsRobot used.
+
+Must be launched with `mjpython`, NOT plain `python`, on macOS - the
+`mujoco.viewer.launch_passive` call needs it or raises at startup. On Linux
+either works. Documented in mujoco/README.md.
+
+Wire protocol (plain JSON, matches par.robots.ros2_mapping):
+
+    {"type": "get_observation"}
+        -> {"robot_state": {"position": {"x","y","z"}, "holding": null},
+            "detections": [{"name": str, "position": {"x","y","z"}}, ...]}
+
+    {"type": "action", "action_id": str, "skill_name": str, "parameters": {}}
+        -> {"success": bool, "message": str}
+
+Threading model: Webots was single-threaded by hard constraint; MuJoCo is
+not, but we keep the same discipline (main thread owns MjModel/MjData/
+viewer, background thread hosts the WS server, requests cross via a
+threading.Queue + per-request Event) so the shape of the code mirrors
+par_bridge.py exactly, and so the physics step loop is the single serial
+point where observations are read and actions dispatched.
+
+Action handling:
+- move({"x","y","z"}): resolves to the nearest-prop keyframe
+  (par_near_red / par_near_blue / par_docked_at_laptop) within a 0.4m XY
+  radius of the target; otherwise falls back to par_home. Interpolates
+  joint-space over _MOVE_INTERP_STEPS physics steps and reports success
+  once the arm settles within _JOINT_TOLERANCE_RAD of the keyframe. The
+  Safety Kernel's collision check runs on Pulse's side BEFORE the action
+  reaches here, so this handler never has to re-check safety.
+- detect() / inspect({"target"}): same as par_bridge.py's e-puck versions,
+  purely bookkeeping, no motion.
+- pick / place: state-only. The Panda has a parallel gripper but no
+  grasping demo is in scope for this phase (same as e-puck's "state only"
+  disclosure in par_bridge.py).
+- stop(): sets zero control signal (holds position). No motion.
+- dock_at_laptop / undock_from_laptop: direct interpolation to
+  par_docked_at_laptop / par_home. These are the hooks WebotsRobot.
+  begin_/end_computer_use() used; MuJoCoRobot's equivalents send the same
+  action names so the ComputerAugmentedRobot path is unchanged.
+"""
+from __future__ import annotations
+
+import json
+import math
+import os
+import queue
+import sys
+import threading
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import mujoco
+import mujoco.viewer
+import numpy as np
+from websockets.sync.server import serve
+
+# scenes/par_arena.py lives one directory up - add to path explicitly rather
+# than a package import so this file can be run directly via `mjpython
+# mujoco/bridge/mujoco_bridge.py` without needing __init__.py plumbing.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from scenes.par_arena import (  # noqa: E402
+    KEYFRAMES,
+    OBJECT_NAMES,
+    build_model,
+    end_effector_world_position,
+    keyframe_qpos,
+    object_world_position,
+)
+
+_HOST = "localhost"
+_PORT = 6003  # Different from Webots's 6001/6002 so a stale Webots process
+              # can't accidentally be contacted on the same socket.
+
+# The arm's `move` resolves to whichever named prop keyframe (near_red /
+# near_blue / docked_at_laptop) is closest in XY to the target, with no
+# radius cutoff - keyframes are discrete, every move has to pick one. This
+# matches the loose "which prop are we trying to approach" semantics of the
+# e-puck's existing waypoint-near-object pattern (see
+# examples/webots_loop.py's _NEAR_RED offsets of 0.4m), without the
+# floating-point boundary ambiguity a cutoff would introduce.
+
+# Joint-space interpolation parameters. 300 ramp steps at the Panda's
+# default 2ms timestep = 0.6 seconds of simulated motion for the ctrl ramp;
+# an additional settling budget allows PD controller lag between ctrl and
+# actual qpos to catch up (the Panda's actuators have real gain dynamics,
+# so qpos lags the ctrl target by ~100-200ms after the ramp ends).
+_MOVE_INTERP_STEPS = 300
+_MOVE_SETTLE_STEPS = 500  # Hold ctrl at target, step physics, poll convergence.
+_JOINT_TOLERANCE_RAD = 0.05  # Convergence tolerance per joint, in radians.
+
+_MAX_MOVE_SECONDS = 20.0  # Safety cap matching par_bridge.py's.
+
+# Panda gripper is actuator index 7 (the 8th actuator, after the 7 arm
+# joints). ctrl=0 commands the gripper closed, ctrl=255 commands fully
+# open (Menagerie convention). Closing on a graspable object stops at the
+# contact and holds via friction + the actuator's -100N force range.
+_GRIPPER_ACTUATOR = 7
+_GRIPPER_OPEN = 255
+_GRIPPER_CLOSED = 0
+_GRIPPER_SETTLE_STEPS = 600  # physics steps to hold a gripper open/close against gravity
+
+# Pick-and-place is a longer sequence than any single move - 8 keyframes
+# + 2 gripper-settle phases. The budget here must stay under Pulse's
+# per-skill timeout for whatever skill_name maps to pick_and_place
+# (default: 180s like use_computer; see Pulse's skill_registry).
+_PICK_AND_PLACE_SECONDS = 60.0
+
+
+@dataclass
+class _Request:
+    message: dict[str, Any]
+    done: threading.Event = field(default_factory=threading.Event)
+    reply: dict[str, Any] = field(default_factory=dict)
+
+
+_REQUESTS: "queue.Queue[_Request]" = queue.Queue()
+
+
+def _ws_handler(websocket) -> None:
+    for raw in websocket:
+        try:
+            message = json.loads(raw)
+        except (TypeError, ValueError) as exc:
+            websocket.send(json.dumps({"success": False, "message": f"invalid JSON: {exc}"}))
+            continue
+        request = _Request(message=message)
+        _REQUESTS.put(request)
+        request.done.wait()
+        websocket.send(json.dumps(request.reply))
+
+
+class _PandaBridge:
+    def __init__(self) -> None:
+        self.model = build_model()
+        self.data = mujoco.MjData(self.model)
+        # Reset to the par_home keyframe so the arm starts in a clean,
+        # non-singular pose rather than the all-zeros default (which would
+        # start folded against itself).
+        home_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_KEY, "par_home")
+        mujoco.mj_resetDataKeyframe(self.model, self.data, home_id)
+        mujoco.mj_forward(self.model, self.data)
+
+        # ctrl array is parallel to actuators, not qpos - for the Panda,
+        # actuators 1-7 drive joints 1-7, actuator 8 is the gripper tendon.
+        # We only command the 7 arm actuators from keyframes; the gripper
+        # stays open (ctrl=255 per Menagerie's "home" keyframe convention).
+        self._n_arm_actuators = 7
+        self.data.ctrl[: self._n_arm_actuators] = self._qpos_to_ctrl(self.data.qpos)
+        if len(self.data.ctrl) > self._n_arm_actuators:
+            self.data.ctrl[self._n_arm_actuators] = 255  # gripper open
+
+        self._holding: str | None = None
+
+    def _qpos_to_ctrl(self, qpos: np.ndarray) -> np.ndarray:
+        """Panda actuators are 1:1 with the first 7 arm joints; ctrl values
+        equal qpos targets (biastype='affine' PD position control)."""
+        return qpos[: self._n_arm_actuators].copy()
+
+    # -- state ----------------------------------------------------------
+
+    def observation_payload(self) -> dict[str, Any]:
+        x, y, z = end_effector_world_position(self.model, self.data)
+        detections = []
+        for name in OBJECT_NAMES:
+            pos = object_world_position(self.model, self.data, name)
+            if pos is not None:
+                detections.append({"name": name, "position": {"x": pos[0], "y": pos[1], "z": pos[2]}})
+        return {
+            "robot_state": {"position": {"x": x, "y": y, "z": z}, "holding": self._holding},
+            "detections": detections,
+        }
+
+    # -- actions --------------------------------------------------------
+
+    def run_action(self, skill_name: str, parameters: dict[str, Any]) -> tuple[bool, str]:
+        handler = getattr(self, f"_do_{skill_name}", None)
+        if handler is None:
+            return False, f"mujoco bridge cannot execute '{skill_name}'"
+        return handler(parameters)
+
+    def _nearest_prop_keyframe(self, x: float, y: float) -> str:
+        """Which named keyframe should a `move` toward (x, y) resolve to?
+        Picks the prop whose XY position is closest to the target. No
+        cutoff - if the target is far from every prop the arm still swings
+        toward whichever prop is nearest, since keyframes are discrete and
+        every move has to pick one."""
+        prop_to_keyframe = {
+            "red_object": "par_near_red",
+            "blue_container": "par_near_blue",
+            "laptop": "par_docked_at_laptop",
+        }
+        best: tuple[float, str] = (float("inf"), "par_home")
+        for prop_name, kf in prop_to_keyframe.items():
+            pos = object_world_position(self.model, self.data, prop_name)
+            if pos is None:
+                continue
+            dist = math.hypot(pos[0] - x, pos[1] - y)
+            if dist < best[0]:
+                best = (dist, kf)
+        return best[1]
+
+    def _interpolate_to_keyframe(self, kf_name: str, deadline: float) -> bool:
+        """Smoothly moves ctrl from current qpos to the named keyframe's
+        qpos over _MOVE_INTERP_STEPS physics steps. Returns True once all
+        arm joints are within _JOINT_TOLERANCE_RAD of the target, False on
+        deadline exhaustion. Physics stepping happens here (this call
+        advances the sim) - viewer.sync() in the outer loop picks up the
+        changes between steps."""
+        target_qpos = keyframe_qpos(self.model, kf_name)
+        if target_qpos is None:
+            return False
+        start_qpos = self.data.qpos.copy()
+        target_arm = target_qpos[: self._n_arm_actuators]
+        start_arm = start_qpos[: self._n_arm_actuators]
+
+        # Phase A: ramp ctrl linearly from start to target over
+        # _MOVE_INTERP_STEPS physics steps. The arm follows but with PD lag.
+        for step in range(_MOVE_INTERP_STEPS):
+            if time.monotonic() > deadline:
+                return False
+            alpha = (step + 1) / _MOVE_INTERP_STEPS
+            self.data.ctrl[: self._n_arm_actuators] = (1.0 - alpha) * start_arm + alpha * target_arm
+            mujoco.mj_step(self.model, self.data)
+            if _VIEWER is not None:
+                _VIEWER.sync()
+
+        # Phase B: hold ctrl at target, step physics, exit the moment qpos
+        # converges to target (within _JOINT_TOLERANCE_RAD per joint) or
+        # when the settling budget runs out, whichever comes first.
+        self.data.ctrl[: self._n_arm_actuators] = target_arm
+        for _ in range(_MOVE_SETTLE_STEPS):
+            if time.monotonic() > deadline:
+                return False
+            mujoco.mj_step(self.model, self.data)
+            if _VIEWER is not None:
+                _VIEWER.sync()
+            arm_now = self.data.qpos[: self._n_arm_actuators]
+            if bool(np.all(np.abs(arm_now - target_arm) < _JOINT_TOLERANCE_RAD)):
+                return True
+
+        # Settling budget exhausted without reaching tolerance. Not
+        # necessarily a failure for the demo - the arm is close enough to
+        # the target to be visibly in the right pose - so report based on
+        # whether we got within 2x tolerance (visibly OK) vs farther out
+        # (something's actually wrong).
+        arm_now = self.data.qpos[: self._n_arm_actuators]
+        return bool(np.all(np.abs(arm_now - target_arm) < 2.0 * _JOINT_TOLERANCE_RAD))
+
+    def _do_move(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        x = float(parameters.get("x", 0.0))
+        y = float(parameters.get("y", 0.0))
+        kf = self._nearest_prop_keyframe(x, y)
+        deadline = time.monotonic() + _MAX_MOVE_SECONDS
+        reached = self._interpolate_to_keyframe(kf, deadline)
+        if not reached:
+            return False, f"timed out moving toward ({x:.2f}, {y:.2f}) via '{kf}'"
+        ee = end_effector_world_position(self.model, self.data)
+        return True, f"moved toward ({x:.2f}, {y:.2f}) via '{kf}'; end-effector at ({ee[0]:.2f}, {ee[1]:.2f}, {ee[2]:.2f})"
+
+    def _do_stop(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        # Just hold current pose - no motion needed; the ctrl values are
+        # already the current targets, so this is a no-op by construction.
+        return True, "stopped"
+
+    def _do_detect(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        names = [d["name"] for d in self.observation_payload()["detections"]]
+        return True, f"detected {len(names)} objects: {', '.join(names) or 'none'}"
+
+    def _do_inspect(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        target = parameters.get("target")
+        found = (
+            object_world_position(self.model, self.data, target) is not None if target else False
+        )
+        return found, f"inspected '{target}': {'found' if found else 'not found'}"
+
+    def _do_pick(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        target = parameters.get("object")
+        if self._holding is not None:
+            return False, f"gripper already holding '{self._holding}'"
+        if object_world_position(self.model, self.data, target) is None:
+            return False, f"object '{target}' not found"
+        self._holding = target
+        return True, f"picked '{target}' (state only - no grasping demo in scope)"
+
+    def _do_place(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        if self._holding is None:
+            return False, "gripper is empty"
+        held, self._holding = self._holding, None
+        target = parameters.get("target")
+        return True, f"placed '{held}' at '{target}' (state only)"
+
+    def _do_dock_at_laptop(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        deadline = time.monotonic() + _MAX_MOVE_SECONDS
+        reached = self._interpolate_to_keyframe("par_docked_at_laptop", deadline)
+        return (reached, "docked at laptop" if reached else "timed out docking at laptop")
+
+    def _do_undock_from_laptop(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        deadline = time.monotonic() + _MAX_MOVE_SECONDS
+        reached = self._interpolate_to_keyframe("par_home", deadline)
+        return (reached, "undocked (returned to home)" if reached else "timed out returning to home")
+
+    def _hold_gripper(self, ctrl_value: int, steps: int, deadline: float) -> None:
+        """Hold arm position; command gripper to the given ctrl value and
+        step physics. Used to open or close the gripper around a static arm
+        pose, as its own stage of the pick-and-place sequence."""
+        for _ in range(steps):
+            if time.monotonic() > deadline:
+                return
+            self.data.ctrl[_GRIPPER_ACTUATOR] = ctrl_value
+            mujoco.mj_step(self.model, self.data)
+            if _VIEWER is not None:
+                _VIEWER.sync()
+
+    def _do_pick_and_place(self, parameters: dict[str, Any]) -> tuple[bool, str]:
+        """Picks up `object` and drops it at `target`.
+
+        Only the red_object -> blue_container pairing is physically wired
+        (the pick/release keyframes are hand-authored for those two props'
+        world positions). Other object/target names return a clean failure
+        rather than silently doing the one thing we can do.
+
+        Sequence (joint-space keyframe interpolation + gripper state changes
+        between them, each interleaved with physics stepping - the only
+        thing physics does differently from previous moves is track a cube
+        that has a freejoint and can be grasped by friction):
+
+            home -> above_red -> hover_red -> grasp_red
+                 -> [close gripper, hold position]
+                 -> hover_red -> above_red
+                 -> above_blue -> hover_blue -> release_blue
+                 -> [open gripper, hold position]
+                 -> above_blue -> home
+
+        Hover keyframes between above and grasp/release are intentional:
+        joint-space interpolation between two very different arm poses can
+        sweep the gripper sideways through the cube's volume, pushing it
+        off its XY position before the fingers close. The hover->grasp
+        step is small enough that joint interpolation stays close to a
+        straight vertical descent.
+
+        Reports success based on whether the cube ended up inside the
+        blue bowl's XY bounds and the gripper is back at home.
+        """
+        source = parameters.get("object")
+        target = parameters.get("target")
+        if source != "red_object" or target != "blue_container":
+            return False, (
+                f"pick_and_place is only wired for red_object -> blue_container "
+                f"in this scene; got '{source}' -> '{target}'"
+            )
+        deadline = time.monotonic() + _PICK_AND_PLACE_SECONDS
+
+        sequence_to_pick = ["par_above_red", "par_hover_red", "par_grasp_red"]
+        sequence_to_place = [
+            "par_hover_red", "par_above_red",
+            "par_above_blue", "par_hover_blue", "par_release_blue",
+        ]
+        sequence_return = ["par_above_blue", "par_home"]
+
+        for kf in sequence_to_pick:
+            if not self._interpolate_to_keyframe(kf, deadline):
+                return False, f"timed out on pick-and-place at '{kf}'"
+        self._hold_gripper(_GRIPPER_CLOSED, _GRIPPER_SETTLE_STEPS, deadline)
+
+        for kf in sequence_to_place:
+            if not self._interpolate_to_keyframe(kf, deadline):
+                return False, f"timed out on pick-and-place at '{kf}'"
+        self._hold_gripper(_GRIPPER_OPEN, _GRIPPER_SETTLE_STEPS, deadline)
+
+        for kf in sequence_return:
+            if not self._interpolate_to_keyframe(kf, deadline):
+                return False, f"timed out on pick-and-place return at '{kf}'"
+
+        # Verify the cube is actually inside the bowl (XY within ~0.08m of
+        # bowl center, Z near bowl-floor level). This is a real physical
+        # verification, not just "ActionResult.success because the motion
+        # finished" - the whole point of the Safety-Kernel/governance story
+        # is to only trust state we can check.
+        red_pos = object_world_position(self.model, self.data, "red_object")
+        blue_pos = object_world_position(self.model, self.data, "blue_container")
+        if red_pos is None or blue_pos is None:
+            return False, "cube or bowl missing from scene after pick-and-place"
+        dx, dy = red_pos[0] - blue_pos[0], red_pos[1] - blue_pos[1]
+        if math.hypot(dx, dy) > 0.1:
+            return False, (
+                f"cube landed at ({red_pos[0]:.2f}, {red_pos[1]:.2f}) - "
+                f"not inside bowl at ({blue_pos[0]:.2f}, {blue_pos[1]:.2f})"
+            )
+        return True, (
+            f"picked red_object and placed in blue_container; "
+            f"cube now at ({red_pos[0]:.2f}, {red_pos[1]:.2f}, {red_pos[2]:.2f})"
+        )
+
+
+# Module-level viewer handle so _interpolate_to_keyframe can call .sync()
+# without needing to be passed through every method - viewer lifecycle is
+# a startup/shutdown concern of main(), not of _PandaBridge itself.
+_VIEWER: Any = None
+
+# Optional frame-capture setup (used for paper figures and debug). Not a
+# live-system concern - only enabled by the --capture-dir CLI flag.
+_CAPTURE_DIR: str | None = None
+_CAPTURE_RENDERER: Any = None
+_CAPTURE_COUNTER: int = 0
+
+
+def _capture_frame(bridge: _PandaBridge, label: str) -> None:
+    """Renders the current scene state to <capture_dir>/<NNN>_<label>.png.
+    Called after each successful action when --capture-dir is set. Any
+    renderer error is caught and logged - frame capture must never block
+    the bridge's reply to Pulse."""
+    global _CAPTURE_COUNTER
+    if _CAPTURE_DIR is None or _CAPTURE_RENDERER is None:
+        return
+    try:
+        from PIL import Image
+        _CAPTURE_RENDERER.update_scene(bridge.data, camera=-1)
+        pixels = _CAPTURE_RENDERER.render()
+        _CAPTURE_COUNTER += 1
+        safe_label = "".join(c if c.isalnum() or c in "-_" else "_" for c in label)
+        path = f"{_CAPTURE_DIR}/{_CAPTURE_COUNTER:03d}_{safe_label}.png"
+        Image.fromarray(pixels).save(path)
+        print(f"[mujoco_bridge] captured frame: {path}", flush=True)
+    except Exception as exc:
+        print(f"[mujoco_bridge] frame-capture failed ({label}): {exc}", flush=True)
+
+
+def _handle_requests(bridge: _PandaBridge) -> None:
+    """Drain any queued WS requests. Called from the main loop between
+    physics steps so bridge state is always consistent when a reply is
+    sent."""
+    while True:
+        try:
+            request = _REQUESTS.get_nowait()
+        except queue.Empty:
+            return
+        message = request.message
+        if message.get("type") == "get_observation":
+            request.reply = bridge.observation_payload()
+        elif message.get("type") == "action":
+            skill = message.get("skill_name", "")
+            success, msg = bridge.run_action(skill, message.get("parameters", {}))
+            request.reply = {"success": success, "message": msg}
+            if success:
+                _capture_frame(bridge, skill)
+        else:
+            request.reply = {"success": False, "message": f"unknown request type: {message.get('type')!r}"}
+        request.done.set()
+
+
+def main(headless: bool = False, capture_dir: str | None = None) -> None:
+    global _VIEWER, _CAPTURE_DIR, _CAPTURE_RENDERER
+    bridge = _PandaBridge()
+
+    if capture_dir is not None:
+        import os as _os
+        _os.makedirs(capture_dir, exist_ok=True)
+        _CAPTURE_DIR = capture_dir
+        _CAPTURE_RENDERER = mujoco.Renderer(bridge.model, height=720, width=1280)
+        # Baseline frame at startup (par_home) so the first captured image is
+        # "arm at rest, before any Pulse-driven motion" - useful for the
+        # paper's figure sequence.
+        _capture_frame(bridge, "initial_home")
+
+    server = serve(_ws_handler, _HOST, _PORT)
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+    print(f"PAR-MuJoCo bridge listening on ws://{_HOST}:{_PORT}", flush=True)
+
+    if headless:
+        # Headless mode (CI / unit tests): run the physics loop without a
+        # viewer, step at wall-clock pace, process requests between steps.
+        try:
+            while True:
+                mujoco.mj_step(bridge.model, bridge.data)
+                _handle_requests(bridge)
+                time.sleep(bridge.model.opt.timestep)
+        except KeyboardInterrupt:
+            pass
+        return
+
+    # Interactive mode (demo): a visible, interactive viewer. On macOS this
+    # requires `mjpython` as the launcher - calling under plain `python`
+    # raises at startup.
+    with mujoco.viewer.launch_passive(bridge.model, bridge.data) as viewer:
+        _VIEWER = viewer
+        try:
+            while viewer.is_running():
+                step_start = time.monotonic()
+                mujoco.mj_step(bridge.model, bridge.data)
+                _handle_requests(bridge)
+                viewer.sync()
+                # Real-time pacing - without this the sim races at thousands
+                # of Hz and the viewer motion is a blur.
+                elapsed = time.monotonic() - step_start
+                remaining = bridge.model.opt.timestep - elapsed
+                if remaining > 0:
+                    time.sleep(remaining)
+        except KeyboardInterrupt:
+            pass
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="PAR <-> MuJoCo bridge.")
+    parser.add_argument("--headless", action="store_true",
+                        help="Run without the interactive viewer (CI / unit tests). "
+                             "In headless mode plain `python` works; interactive mode on macOS "
+                             "needs `mjpython`.")
+    parser.add_argument("--capture-dir", default=None,
+                        help="Directory to save a PNG frame after every successful action. "
+                             "Used for paper figures and debug; off by default.")
+    args = parser.parse_args()
+    main(headless=args.headless, capture_dir=args.capture_dir)

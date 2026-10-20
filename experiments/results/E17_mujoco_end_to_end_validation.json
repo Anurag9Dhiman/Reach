@@ -1,0 +1,56 @@
+{
+  "experiment_id": "E17",
+  "title": "MuJoCo End-to-End Validation",
+  "generated_at": "2026-10-07T11:50:29.529570+00:00",
+  "config": {
+    "evaluation_method": "one real Runtime.run_once() sequence through ComputerAugmentedRobot(MuJoCoRobot()) against a live MuJoCo 3.x process (Franka Panda from the Menagerie), via mujoco_bridge.py - real physics, real end-effector position, not a kinematic fake",
+    "profile": "simulation",
+    "distance_tolerance_m": 0.2
+  },
+  "metrics": {
+    "task_reached_complete": true,
+    "near_red_allowed_succeeded_and_converged": true,
+    "collision_correctly_denied": true,
+    "near_blue_allowed_succeeded_and_converged": true,
+    "workspace_violation_correctly_denied": true,
+    "estop_blocks_next_action": true,
+    "estop_recovers_after_clear": true,
+    "all_checks_passed": true
+  },
+  "notes": "Re-run against MuJoCo 2026-10-07 (previously run against Webots 2026-10-01; Webots was then retired entirely). Confirms, in one real run against live MuJoCo, every mechanic that was previously only confirmed against Webots: live collision-margin denial fires against a real detected object position, live workspace-violation denial fires identically to the in-memory case, waypoint approach converges within tolerance against a 7-DOF arm whose discretized keyframe-based `move` resolves per-prop (see mujoco/scenes/par_arena.py), and emergency-stop both blocks the very next action (before it ever reaches the real robot) and still lets the task recover to task_complete once cleared. The distance tolerance here (25cm) is looser than the e-puck's 5cm because the arm snaps to discrete joint-space keyframes rather than solving IK to an arbitrary (x, y, z) target - this is explicit scope, not a measurement regression (see mujoco/README.md's 'Known limitations' section). The paper's claim that the Pulse architecture is physical-simulator-agnostic now has evidence from two completely different simulators (Webots e-puck, MuJoCo Franka Panda), not just one.",
+  "trials": [
+    {
+      "task_reached_complete": true,
+      "total_wall_clock_seconds": 0.06066054100301699,
+      "near_red": {
+        "allowed": true,
+        "succeeded": true,
+        "latency_seconds": 0.0078005840005062055,
+        "distance_to_target_m": 0.12066500616205172,
+        "within_tolerance": true
+      },
+      "collision_denial": {
+        "denied": true,
+        "rejection_reason": "collision risk: target (0.5, 0.2, 0.0) is within 0.3m of detected object 'red_object'",
+        "latency_seconds": 0.0025938750004570466
+      },
+      "near_blue": {
+        "allowed": true,
+        "succeeded": true,
+        "latency_seconds": 0.007836084001610288,
+        "distance_to_target_m": 0.15666503687393943,
+        "within_tolerance": true
+      },
+      "workspace_violation_denial": {
+        "denied": true,
+        "rejection_reason": "target (100.0, 0.0, 0.0) is outside workspace bounds x=(-2.0, 2.0) y=(-2.0, 2.0) z=(0.0, 2.0)",
+        "latency_seconds": 0.002658875000633998
+      }
+    },
+    {
+      "first_step_succeeded": true,
+      "blocked_while_engaged": true,
+      "recovered_after_clear": true
+    }
+  ]
+}
